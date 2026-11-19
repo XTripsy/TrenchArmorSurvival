@@ -1,6 +1,10 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1795093445
+::res://::1795096195
+export_presets.cfg::TextFile::-1::1795096195::0::1::::<><><>0<>0<><>::
 GDD_TrenchArmorSurvival.md::TextFile::-1::1793903727::0::1::::<><><>0<>0<><>::
+index.apple-touch-icon.png::CompressedTexture2D::780228966613786189::1795096195::1795096232::1::::<><><>0<>0<>d69cc71339c8b34b1e350aaa760c82c0<>res://.godot/imported/index.apple-touch-icon.png-8085a11cc297d91deb55511843765958.ctex::
+index.icon.png::CompressedTexture2D::7940553177716100828::1795096195::1795096232::1::::<><><>0<>0<>9c2cb94945b07c92b34267b8ef561c3c<>res://.godot/imported/index.icon.png-5665fad188e88d1e882500a4376bfe02.ctex::
+index.png::CompressedTexture2D::3169544650038463159::1795096195::1795096232::1::::<><><>0<>0<>fd888f2fd8336efff297418ad55174b4<>res://.godot/imported/index.png-5122033cac747157decad52589e2295c.ctex::
 TECHNICAL_ARCHITECTURE_TrenchArmorSurvival.md::TextFile::-1::1793903732::0::1::::<><><>0<>0<><>::
 TODO_TrenchArmorSurvival.md::TextFile::-1::1794213203::0::1::::<><><>0<>0<><>::
 ::res://autoloads/::1793905981
@@ -8,6 +12,10 @@ audio_manager.gd::GDScript::207059993706433454::1794212612::0::1::::<>Node<><>0<
 event_bus.gd::GDScript::9182360546049524258::1793906994::0::1::::<>Node<><>0<>0<><>::
 game_manager.gd::GDScript::6829617250680739399::1793907114::0::1::::<>Node<><>0<>0<><>::
 vfx_manager.gd::GDScript::783199872896547770::1793908403::0::1::::<>Node<><>0<>0<><>::
+::res://build/::1795096180
+::res://build/windows.32/::1795095109
+::res://build/windows.64/::1795095121
+::res://build/windows.arm64/::1795095131
 ::res://docs/::1793905703
 ::res://docs/superpowers/::1793905788
 ::res://docs/superpowers/plans/::1794129521
@@ -39,10 +47,11 @@ vfx_manager.gd::GDScript::783199872896547770::1793908403::0::1::::<>Node<><>0<>0
 2026-11-08-phase6-arena-design.md::TextFile::-1::1794127073::0::1::::<><><>0<>0<><>::
 2026-11-08-phase7-ui-design.md::TextFile::-1::1794128419::0::1::::<><><>0<>0<><>::
 2026-11-08-phase8-audio-design.md::TextFile::-1::1794129351::0::1::::<><><>0<>0<><>::
-::res://report/::1795093257
+::res://report/::1795094244
 Laporan_TrenchArmorSurvival.md::TextFile::-1::1795082170::0::1::::<><><>0<>0<><>::
-::res://scenes/::1795092944
-arena.tscn::PackedScene::8992982519694257604::1795092944::0::1::::<><><>0<>0<><>::uid://dccsdj7p5emal::::res://scripts/arena/arena_controller.gd<>res://scenes/environment/steel_bunker.tscn<>res://scenes/environment/sandbag_barricade.tscn<>res://scenes/environment/mud_crater.tscn<>res://scenes/player/player.tscn<>uid://b6ugk5dukpi38::::res://scripts/arena/camera_shake.gd<>uid://c20yamyu5klqy::::res://scripts/arena/wave_director.gd<>res://scenes/ui/hud.tscn<>res://scenes/ui/pause_menu.tscn<>res://scenes/ui/game_over_menu.tscn
+::res://report/video/::1795094232
+::res://scenes/::1795093510
+arena.tscn::PackedScene::8992982519694257604::1795093510::0::1::::<><><>0<>0<><>::uid://dccsdj7p5emal::::res://scripts/arena/arena_controller.gd<>res://scenes/environment/steel_bunker.tscn<>res://scenes/environment/sandbag_barricade.tscn<>res://scenes/environment/mud_crater.tscn<>res://scenes/player/player.tscn<>uid://b6ugk5dukpi38::::res://scripts/arena/camera_shake.gd<>uid://c20yamyu5klqy::::res://scripts/arena/wave_director.gd<>res://scenes/ui/hud.tscn<>res://scenes/ui/pause_menu.tscn<>res://scenes/ui/game_over_menu.tscn
 main_menu.tscn::PackedScene::-1::1794128572::0::1::::<><><>0<>0<><>::res://scripts/ui/main_menu.gd
 ::res://scenes/enemies/::1793982467
 enemy_artillery.tscn::PackedScene::-1::1794212187::0::1::::<><><>0<>0<><>::res://scripts/enemies/enemy_artillery.gd
