@@ -1,0 +1,35 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_dreadnought.gd" id="1_dreadnought"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(44, 32)
+
+[node name="EnemyDreadnought" type="CharacterBody2D" groups=["enemy"]]
+collision_layer = 2
+collision_mask = 47
+motion_mode = 1
+script = ExtResource("1_dreadnought")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.545098, 0.227451, 0.227451, 1)
+polygon = PackedVector2Array(-24, -18, 20, -18, 24, -8, 24, 8, 20, 18, -24, 18)
+
+[node name="Outline" type="Line2D" parent="Visual"]
+width = 1.5
+default_color = Color(0.85098, 0.788235, 0.639216, 1)
+points = PackedVector2Array(-24, -18, 20, -18, 24, -8, 24, 8, 20, 18, -24, 18, -24, -18)
+
+[node name="Barrel" type="Polygon2D" parent="Visual"]
+color = Color(0.211765, 0.223529, 0.247059, 1)
+polygon = PackedVector2Array(0, -4, 26, -4, 26, 4, 0, 4)
+
+[node name="MuzzleMarker" type="Marker2D" parent="."]
+position = Vector2(26, 0)
+
+[node name="FireTimer" type="Timer" parent="."]
+wait_time = 3.5
+autostart = false

@@ -1,0 +1,193 @@
+[gd_scene format=3 uid="uid://d1ejdxdaqkq41"]
+
+[ext_resource type="Script" uid="uid://dccsdj7p5emal" path="res://scripts/arena/arena_controller.gd" id="1_arena"]
+[ext_resource type="PackedScene" path="res://scenes/environment/steel_bunker.tscn" id="2_bunker"]
+[ext_resource type="PackedScene" path="res://scenes/environment/sandbag_barricade.tscn" id="3_sandbag"]
+[ext_resource type="PackedScene" path="res://scenes/environment/mud_crater.tscn" id="4_mud"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="5_player"]
+[ext_resource type="Script" uid="uid://b6ugk5dukpi38" path="res://scripts/arena/camera_shake.gd" id="6_camera"]
+[ext_resource type="Script" uid="uid://c20yamyu5klqy" path="res://scripts/arena/wave_director.gd" id="7_wave"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="8_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="9_pause"]
+[ext_resource type="PackedScene" path="res://scenes/ui/game_over_menu.tscn" id="10_gameover"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_horizontal"]
+size = Vector2(600, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vertical"]
+size = Vector2(20, 320)
+
+[node name="Arena" type="Node2D" unique_id=1035745224]
+script = ExtResource("1_arena")
+
+[node name="Background" type="Polygon2D" parent="." unique_id=1648761915]
+z_index = -100
+color = Color(0.290196, 0.231373, 0.196078, 1)
+polygon = PackedVector2Array(0, 0, 1280, 0, 1280, 720, 0, 720)
+
+[node name="PerimeterWalls" type="Node2D" parent="." unique_id=1002644042]
+
+[node name="WallTopLeft" type="StaticBody2D" parent="PerimeterWalls" unique_id=468753143 groups=["bouncy_surface"]]
+position = Vector2(300, 10)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallTopLeft" unique_id=1049218849]
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallTopLeft" unique_id=2063828679]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-300, -10, 300, -10, 300, 10, -300, 10)
+
+[node name="WallTopRight" type="StaticBody2D" parent="PerimeterWalls" unique_id=716080899 groups=["bouncy_surface"]]
+position = Vector2(980, 10)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallTopRight" unique_id=1933866556]
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallTopRight" unique_id=327438313]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-300, -10, 300, -10, 300, 10, -300, 10)
+
+[node name="WallBottomLeft" type="StaticBody2D" parent="PerimeterWalls" unique_id=173104473 groups=["bouncy_surface"]]
+position = Vector2(300, 710)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallBottomLeft" unique_id=1870406632]
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallBottomLeft" unique_id=1494685571]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-300, -10, 300, -10, 300, 10, -300, 10)
+
+[node name="WallBottomRight" type="StaticBody2D" parent="PerimeterWalls" unique_id=1424676445 groups=["bouncy_surface"]]
+position = Vector2(980, 710)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallBottomRight" unique_id=68748221]
+shape = SubResource("RectangleShape2D_horizontal")
+
+[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallBottomRight" unique_id=954559006]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-300, -10, 300, -10, 300, 10, -300, 10)
+
+[node name="WallLeftTop" type="StaticBody2D" parent="PerimeterWalls" unique_id=1001093736 groups=["bouncy_surface"]]
+position = Vector2(10, 160)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallLeftTop" unique_id=1268458895]
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallLeftTop" unique_id=1587369026]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
+
+[node name="WallLeftBottom" type="StaticBody2D" parent="PerimeterWalls" unique_id=1054009254 groups=["bouncy_surface"]]
+position = Vector2(10, 560)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallLeftBottom" unique_id=213197020]
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallLeftBottom" unique_id=1535951935]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
+
+[node name="WallRightTop" type="StaticBody2D" parent="PerimeterWalls" unique_id=370281362 groups=["bouncy_surface"]]
+position = Vector2(1270, 160)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallRightTop" unique_id=673272237]
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallRightTop" unique_id=1877716377]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
+
+[node name="WallRightBottom" type="StaticBody2D" parent="PerimeterWalls" unique_id=103077544 groups=["bouncy_surface"]]
+position = Vector2(1270, 560)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallRightBottom" unique_id=275298380]
+shape = SubResource("RectangleShape2D_vertical")
+
+[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallRightBottom" unique_id=1068207827]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
+
+[node name="SpawnGates" type="Node2D" parent="." unique_id=128588747]
+
+[node name="GateTop" type="Marker2D" parent="SpawnGates" unique_id=1896006173 groups=["spawn_gate"]]
+position = Vector2(640, -40)
+
+[node name="GateBottom" type="Marker2D" parent="SpawnGates" unique_id=1926393494 groups=["spawn_gate"]]
+position = Vector2(640, 760)
+
+[node name="GateLeft" type="Marker2D" parent="SpawnGates" unique_id=939148147 groups=["spawn_gate"]]
+position = Vector2(-40, 360)
+
+[node name="GateRight" type="Marker2D" parent="SpawnGates" unique_id=1724176638 groups=["spawn_gate"]]
+position = Vector2(1340, 360)
+
+[node name="Obstacles" type="Node2D" parent="." unique_id=1867628492]
+
+[node name="BunkerNW" parent="Obstacles" unique_id=2088598192 instance=ExtResource("2_bunker")]
+position = Vector2(320, 180)
+
+[node name="BunkerNE" parent="Obstacles" unique_id=1640433773 instance=ExtResource("2_bunker")]
+position = Vector2(960, 180)
+rotation = 1.5707964
+
+[node name="BunkerSE" parent="Obstacles" unique_id=350485651 instance=ExtResource("2_bunker")]
+position = Vector2(960, 540)
+rotation = 3.1415927
+
+[node name="BunkerSW" parent="Obstacles" unique_id=698296620 instance=ExtResource("2_bunker")]
+position = Vector2(320, 540)
+rotation = 4.712389
+
+[node name="SandbagA" parent="Obstacles" unique_id=950447692 instance=ExtResource("3_sandbag")]
+position = Vector2(520, 300)
+
+[node name="SandbagB" parent="Obstacles" unique_id=1053396664 instance=ExtResource("3_sandbag")]
+position = Vector2(760, 300)
+
+[node name="SandbagC" parent="Obstacles" unique_id=1097919485 instance=ExtResource("3_sandbag")]
+position = Vector2(560, 460)
+
+[node name="MudA" parent="Obstacles" unique_id=969583560 instance=ExtResource("4_mud")]
+position = Vector2(400, 360)
+
+[node name="MudB" parent="Obstacles" unique_id=1482305181 instance=ExtResource("4_mud")]
+position = Vector2(880, 360)
+
+[node name="MudC" parent="Obstacles" unique_id=2008469082 instance=ExtResource("4_mud")]
+position = Vector2(640, 200)
+
+[node name="Enemies" type="Node2D" parent="." unique_id=1469536440]
+
+[node name="Player" parent="." unique_id=808563476 instance=ExtResource("5_player")]
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=173075776]
+position = Vector2(640, 360)
+script = ExtResource("6_camera")
+
+[node name="WaveDirector" type="Node" parent="." unique_id=1977132857]
+script = ExtResource("7_wave")
+
+[node name="SpawnTimer" type="Timer" parent="WaveDirector" unique_id=439422984]
+wait_time = 3.0
+
+[node name="HUD" parent="." unique_id=632977220 instance=ExtResource("8_hud")]
+
+[node name="PauseMenu" parent="." unique_id=1400091070 instance=ExtResource("9_pause")]
+
+[node name="GameOverMenu" parent="." unique_id=1286619376 instance=ExtResource("10_gameover")]

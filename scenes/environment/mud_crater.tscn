@@ -1,0 +1,24 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/environment/mud_crater.gd" id="1_mud"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 80.0
+
+[node name="MudCrater" type="Area2D"]
+collision_layer = 32
+collision_mask = 3
+z_index = -1
+script = ExtResource("1_mud")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_1")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.180392, 0.141176, 0.117647, 1)
+polygon = PackedVector2Array(88, 0, 64, 37, 44, 76, 0, 74, -37, 64, -76, 44, -88, 0, -64, -37, -44, -76, 0, -74, 37, -64, 76, -44)
+
+[node name="Rim" type="Line2D" parent="Visual"]
+points = PackedVector2Array(88, 0, 64, 37, 44, 76, 0, 74, -37, 64, -76, 44, -88, 0, -64, -37, -44, -76, 0, -74, 37, -64, 76, -44, 88, 0)
+width = 3.0
+default_color = Color(0.117647, 0.094118, 0.07451, 1)

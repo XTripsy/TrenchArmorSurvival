@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="TreadMark" type="Line2D"]
+width = 5.0
+default_color = Color(0.180392, 0.141176, 0.117647, 1)
+z_index = -2
+antialiased = true

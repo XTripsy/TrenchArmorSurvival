@@ -1,0 +1,53 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hitbox"]
+size = Vector2(36, 36)
+
+[node name="Player" type="CharacterBody2D" groups=["player"]]
+position = Vector2(640, 360)
+collision_layer = 1
+collision_mask = 54
+motion_mode = 1
+script = ExtResource("1_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_hitbox")
+
+[node name="HullVisual" type="Node2D" parent="."]
+
+[node name="HullBody" type="Polygon2D" parent="HullVisual"]
+color = Color(0.333333, 0.419608, 0.184314, 1)
+polygon = PackedVector2Array(18, -14, 18, 14, -16, 14, -18, 10, -18, -10, -16, -14)
+
+[node name="TrackLeft" type="Polygon2D" parent="HullVisual"]
+color = Color(0.180392, 0.141176, 0.117647, 1)
+polygon = PackedVector2Array(-16, -16, 16, -16, 16, -10, -16, -10)
+
+[node name="TrackRight" type="Polygon2D" parent="HullVisual"]
+color = Color(0.180392, 0.141176, 0.117647, 1)
+polygon = PackedVector2Array(-16, 10, 16, 10, 16, 16, -16, 16)
+
+[node name="Outline" type="Line2D" parent="HullVisual"]
+width = 1.5
+default_color = Color(0.909804, 0.85098, 0.627451, 1)
+points = PackedVector2Array(18, -14, 18, 14, -16, 14, -18, 10, -18, -10, -16, -14, 18, -14)
+
+[node name="TurretPivot" type="Node2D" parent="."]
+
+[node name="TurretVisual" type="Polygon2D" parent="TurretPivot"]
+color = Color(0.231373, 0.290196, 0.12549, 1)
+polygon = PackedVector2Array(-8, -6, 20, -3, 22, 0, 20, 3, -8, 6)
+
+[node name="Star" type="Polygon2D" parent="TurretPivot/TurretVisual"]
+z_index = 1
+color = Color(1, 1, 1, 1)
+polygon = PackedVector2Array(0, -5, 1.47, -1.55, 4.76, -1.55, 2.38, 0.9, 2.94, 4.05, 0, 2, -2.94, 4.05, -2.38, 0.9, -4.76, -1.55, -1.47, -1.55)
+
+[node name="MuzzleMarker" type="Marker2D" parent="TurretPivot"]
+position = Vector2(24, 0)
+
+[node name="TreadTimer" type="Timer" parent="."]
+wait_time = 0.05
+autostart = true
