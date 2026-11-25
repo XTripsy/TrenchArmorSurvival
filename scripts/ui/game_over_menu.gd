@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const BEST_SCORE_SETTING: String = "application/config/best_score"
+
 @onready var overlay: Control = $Overlay
 @onready var header_label: Label = $Overlay/HeaderLabel
 @onready var stats_label: Label = $Overlay/StatsLabel
@@ -7,6 +9,8 @@ extends CanvasLayer
 @onready var menu_button: Button = $Overlay/MenuButton
 var _lockout_timer: float = 0.0
 var _reveal_timer: float = 0.0
+var _rank_stamp: RankStamp
+var _record_badge: Label
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -17,8 +21,31 @@ func _ready() -> void:
 	redeploy_button.pressed.connect(_on_redeploy_pressed)
 	menu_button.pressed.connect(_on_menu_pressed)
 	header_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_DISPLAY, UIThemeBuilder.UI_TEXT_DANGER, 2)
+	_build_report_decoration()
 	if GameManager.state == GameManager.State.GAME_OVER:
 		_show_stats()
+
+func _build_report_decoration() -> void:
+	var frame: TacticalFrame = TacticalFrame.new()
+	frame.show_brackets = true
+	frame.show_scanlines = true
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(frame)
+	
+	var report_label: Label = Label.new()
+	report_label.text = "AFTER-ACTION COMBAT REPORT"
+	report_label.position = Vector2(0, 210)
+	report_label.size = Vector2(1280, 30)
+	report_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	report_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_HEADER, UIThemeBuilder.UI_TEXT_MUTED)
+	overlay.add_child(report_label)
+	
+	_rank_stamp = RankStamp.new()
+	_rank_stamp.position = Vector2(850, 150)
+	_rank_stamp.custom_minimum_size = Vector2(76, 76)
+	_rank_stamp.visible = false
+	overlay.add_child(_rank_stamp)
 
 func _process(delta: float) -> void:
 	if _reveal_timer > 0.0:
@@ -45,16 +72,46 @@ func _show_stats() -> void:
 
 func _show_debrief() -> void:
 	var total: int = maxi(0, floori(GameManager.time_survived))
+	var best_score: int = int(ProjectSettings.get_setting(BEST_SCORE_SETTING, 0))
+	var is_record: bool = GameManager.score > best_score
+	if is_record:
+		ProjectSettings.set_setting(BEST_SCORE_SETTING, GameManager.score)
 	header_label.text = "ARMOR DESTROYED"
-	stats_label.text = "FINAL SCORE: %06d\nTIME SURVIVED: %02d:%02d\nRICOCHET KILLS: %d" % [
+	stats_label.text = "FINAL SCORE: %06d\nSECTOR REACHED: %02d\nOUTPOSTS CAPTURED: %d/%d\nRICOCHET KILLS: %d\nTIME SURVIVED: %02d:%02d" % [
 		GameManager.score,
+		GameManager.sector_index,
+		GameManager.zones_captured,
+		GameManager.zones_total,
+		GameManager.ricochet_kills,
 		total / 60,
 		total % 60,
-		GameManager.ricochet_kills,
 	]
+	if _record_badge == null:
+		_record_badge = Label.new()
+		_record_badge.position = Vector2(440, 400)
+		_record_badge.size = Vector2(400, 28)
+		_record_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_record_badge.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_HEADER, UIThemeBuilder.UI_BORDER_ACTIVE)
+		overlay.add_child(_record_badge)
+	_record_badge.text = "NEW RECORD!" if is_record else ""
+	_rank_stamp.rank_text = _rank_for_score(GameManager.score)
+	_rank_stamp.visible = true
+	_rank_stamp.scale = Vector2(2.2, 2.2)
+	_rank_stamp.rotation = deg_to_rad(-6.0)
+	var stamp_tween: Tween = create_tween()
+	stamp_tween.tween_property(_rank_stamp, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	overlay.visible = true
 	_lockout_timer = 0.8
 	redeploy_button.disabled = true
+
+func _rank_for_score(score: int) -> String:
+	if score >= 8000:
+		return "RANK S"
+	if score >= 4500:
+		return "RANK A"
+	if score >= 2000:
+		return "RANK B"
+	return "RANK C"
 
 func _unhandled_input(event: InputEvent) -> void:
 	if overlay.visible and event.is_action_pressed("ui_accept"):
@@ -73,3 +130,14 @@ func _on_menu_pressed() -> void:
 	var arena: Node = get_parent()
 	if arena != null and arena.has_method("return_to_menu"):
 		arena.call("return_to_menu")
+
+class RankStamp:
+	extends Control
+
+	var rank_text: String = "RANK C"
+
+	func _draw() -> void:
+		var center: Vector2 = size * 0.5
+		draw_circle(center, 34.0, Color("#1B1E22"))
+		draw_arc(center, 34.0, 0.0, TAU, 32, UIThemeBuilder.UI_BORDER_ACTIVE, 3.0)
+		draw_string(UIThemeBuilder.build_system_font(), center + Vector2(-27, 5), rank_text, HORIZONTAL_ALIGNMENT_CENTER, 54, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_BORDER_ACTIVE)

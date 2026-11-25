@@ -4,7 +4,7 @@
 
 [node name="PauseMenu" type="CanvasLayer"]
 process_mode = 3
-layer = 2
+layer = 3
 script = ExtResource("1_pause")
 
 [node name="Overlay" type="Control" parent="."]
@@ -24,7 +24,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0, 0, 0, 0.619608)
+color = Color(0.04, 0.05, 0.06, 0.8)
 
 [node name="TitleLabel" type="Label" parent="Overlay"]
 offset_left = 0.0

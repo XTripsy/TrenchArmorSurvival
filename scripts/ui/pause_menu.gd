@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 @onready var overlay: Control = $Overlay
+@onready var title_label: Label = $Overlay/TitleLabel
 @onready var audio_button: Button = $Overlay/AudioButton
 @onready var resume_button: Button = $Overlay/ResumeButton
 @onready var restart_button: Button = $Overlay/RestartButton
@@ -11,6 +12,13 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	overlay.visible = false
 	
+	title_label.text = "TACTICAL PAUSE"
+	title_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_DISPLAY, UIThemeBuilder.UI_TEXT_PRIMARY)
+	var frame: TacticalFrame = TacticalFrame.new()
+	frame.show_hazard_stripes = true
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(frame)
 	UIThemeBuilder.setup_tactical_button(audio_button)
 	UIThemeBuilder.setup_tactical_button(resume_button)
 	_audio_button_refresh()
