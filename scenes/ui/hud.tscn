@@ -89,6 +89,29 @@ theme_override_font_sizes/font_size = 18
 text = "TIME: 00:00"
 horizontal_alignment = 1
 
+[node name="ObjectiveLabel" type="Label" parent="HUDRoot"]
+offset_top = 70.0
+offset_right = 1280.0
+offset_bottom = 98.0
+theme_override_colors/font_color = Color(0.85098, 0.654902, 0.219608, 1)
+theme_override_font_sizes/font_size = 20
+text = "THREAT: 0%"
+horizontal_alignment = 1
+
+[node name="ObjectiveBar" type="Node2D" parent="HUDRoot"]
+visible = false
+position = Vector2(440, 106)
+
+[node name="Back" type="Line2D" parent="HUDRoot/ObjectiveBar"]
+points = PackedVector2Array(0, 0, 400, 0)
+width = 12.0
+default_color = Color(0.101961, 0.101961, 0.101961, 0.85)
+
+[node name="Fill" type="Line2D" parent="HUDRoot/ObjectiveBar"]
+points = PackedVector2Array(0, 0, 400, 0)
+width = 8.0
+default_color = Color(0.545098, 0.227451, 0.227451, 1)
+
 [node name="Reticle" type="Node2D" parent="HUDRoot"]
 
 [node name="LineTop" type="Line2D" parent="HUDRoot/Reticle"]
