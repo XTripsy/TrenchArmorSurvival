@@ -4,7 +4,7 @@
 
 [node name="GameOverMenu" type="CanvasLayer"]
 process_mode = 3
-layer = 30
+layer = 2
 script = ExtResource("1_gameover")
 
 [node name="Overlay" type="Control" parent="."]

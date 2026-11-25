@@ -4,7 +4,7 @@
 
 [node name="PauseMenu" type="CanvasLayer"]
 process_mode = 3
-layer = 20
+layer = 2
 script = ExtResource("1_pause")
 
 [node name="Overlay" type="Control" parent="."]
@@ -36,6 +36,13 @@ theme_override_font_sizes/font_size = 48
 text = "PAUSED"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="AudioButton" type="Button" parent="Overlay"]
+offset_left = 490.0
+offset_top = 240.0
+offset_right = 790.0
+offset_bottom = 288.0
+text = "AUDIO: ON"
 
 [node name="ResumeButton" type="Button" parent="Overlay"]
 offset_left = 490.0

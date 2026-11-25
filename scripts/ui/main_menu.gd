@@ -7,6 +7,7 @@ const GRID_HEIGHT: int = 720
 const GRID_COLOR: Color = Color(0.168627, 0.290196, 0.352941, 0.22)
 
 @onready var blueprint_grid: Node2D = $BlueprintGrid
+@onready var title: Label = $TitleLabel
 @onready var deploy_button: Button = $DeployButton
 @onready var quit_button: Button = $QuitButton
 
@@ -14,9 +15,14 @@ func _ready() -> void:
 	GameManager.change_state(GameManager.State.MENU)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	AudioManager.stop_engine()
-	_build_blueprint_grid()
+	
+	title.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_DISPLAY, Color("#E8D9A0"), 2)
+	UIThemeBuilder.setup_tactical_button(deploy_button)
+	UIThemeBuilder.setup_tactical_button(quit_button)
+	
 	deploy_button.pressed.connect(_on_deploy_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
+	deploy_button.grab_focus()
 
 func _build_blueprint_grid() -> void:
 	for x: int in range(0, GRID_WIDTH + 1, GRID_STEP):

@@ -39,7 +39,7 @@
 | 9 — QA & Release | T-039..T-041 | 🔄 Berjalan (manual) | Akan dikerjakan manual setelah Phase 12 UI Overhaul selesai |
 | 10 — Boss & Map Expansion | T-042..T-045 | ✅ Selesai + terverifikasi | Harness headless & windowed `PASS` 55/55 exit 0; `--headless --editor --quit` exit 0; `--headless --quit` exit 0 |
 | 11 — Territory Invasion & Playtest UI | T-046..T-049 | ✅ Selesai + terverifikasi | Harness headless & windowed `PASS` 55/55 exit 0; `--headless --editor --quit` exit 0; `--headless --quit` exit 0 |
-| 12 — Professional UI/UX Overhaul | T-050..T-054 | ⬜ Belum | Implementasi `UI_DESIGN__TrenchArmorSurvival.md` (Design Tokens, `UIThemeBuilder`, HUD v2, Diegetic Feedback, Menu Safety Guards) |
+| 12 — Professional UI/UX Overhaul | T-050..T-054 | ✅ Selesai + terverifikasi | Editor parse exit 0; HUD harness 5/5; diegetic/menu harness 8/8; Phase 9 tetap manual |
 
 ### Ringkasan Foundation (Phase 0–8)
 - **Phase 0–3:** `project.godot` (`1280×720`, 60 Hz, 6 physics layers, 4 autoloads), `EventBus`, `GameManager` (`MENU/PLAYING/PAUSED/GAME_OVER`, score, hit-stop), `VFXManager`, `AudioManager` (`AudioStreamGenerator` 8-voice pool + BGM), `PlayerTank` (hull/turret, recoil, i-frames, tread marks), `PlayerBullet` (1× ricochet `#FF5500` 2× score), `EnemyBullet`.
@@ -192,7 +192,7 @@ res://
   - Implement procedural `SystemFont` builder (`["JetBrains Mono", "Consolas", "Liberation Mono", "Courier New"]`, weight `700`, `outline_size = 2`, `outline_color = #0B0C0E`) and `StyleBoxFlat` generators for panels (`4 px` radius, `2 px` border, `12 px` H / `8 px` V padding) and buttons across all 4 states: Normal, Hover/Focus (`UI_BORDER_ACTIVE`), Pressed (`UI_BG_DARK`), and Disabled (`modulate.a = 0.45`).
   - Provide a reusable button attachment helper (`setup_tactical_button(btn: Button) -> void`) that enforces `pivot_offset = size / 2` on `ready` and `resized`, connects `mouse_entered` / `focus_entered` / `mouse_exited` / `focus_exited` / `button_down` / `button_up` scale tweens (`1.03` hover, `0.97` pressed, `0.1s`), and triggers metallic click SFX via `AudioManager`.
   - **DoD:** `UIThemeBuilder` compiles with strict static typing and generates consistent `Theme` / `StyleBoxFlat` resources and symmetric button pivot scaling with zero external font/image assets.
-- [ ] **T-051** Upgrade `scripts/ui/hud.gd` — 3-Zone Tactical Layout, Segmented Armor Bar & Minimap (`UI_DESIGN §3.1–3.3`)
+- [x] **T-051** Upgrade `scripts/ui/hud.gd` — 3-Zone Tactical Layout, Segmented Armor Bar & Minimap (`UI_DESIGN §3.1–3.3`)
   - Ensure HUD runs on `CanvasLayer (layer = 1)` with `24 px` viewport safe margins and `8 px` grid alignment.
   - **Top-Left (`ARMOR INTEGRITY`):** Render `TYPE_MICRO` label + segmented `HBoxContainer` (`separation = 4 px`, `36x14 px` per segment, auto-scaling to `28x14 px` if `MAX_HP > 5`). Active segments use `SEMANTIC_ALLY` (`#84C458` `1 px` border), empty use `UI_SURFACE` (`UI_BORDER_STEEL` border). When `HP == 1`, switch active fill to `SEMANTIC_DANGER` with a `2 Hz` alpha pulse tween (`0.55 <-> 1.0`). On damage, flash the lost segment white (`#FFFFFF`) for `0.15s` before dimming to `UI_SURFACE`.
   - **Top-Center (Dynamic Phase & Objective Tracker):** Transition between phases using a `0.25s` fade + `8 px` vertical slide tween:
@@ -201,18 +201,18 @@ res://
     3. `INVASION`: `TERRITORY INVASION — CAPTURE OUTPOSTS` + `3` colorblind-safe tactical node badges (`72x24 px`, `separation = 12 px`): `NEUTRAL` (`01 [ - ]`), `CAPTURING` (`01 [ ▲ ]` + `%`), `CONTESTED` (`01 [ ! ]` + pulsing border), `CAPTURED` (`01 [ ✓ ]`).
   - **Top-Right (Telemetry & `160x90 px` Tactical Radar):** Right-aligned `SCORE` (`%06d` `TYPE_METRIC` with `1.0 -> 1.2 -> 1.0` `0.18s` scale punch anchored at center-right) + `TIME %02d:%02d`, with a `160x90 px` (`16:9`) minimap `8 px` below rendering arena bounds/obstacles (`UI_SURFACE`), capture zones (`r = 6 px`), enemies (`r = 2.5 px` `SEMANTIC_DANGER`, Boss `r = 5 px` white outline), and player (`r = 3.5 px` `#FFFFFF` + `8 px` turret direction line).
   - **DoD:** All 3 HUD zones match exact dimensions, tokens, colorblind-safe icons, critical HP pulse, Boss damage trail, and minimap Z-order without overlapping gameplay.
-- [ ] **T-052** Upgrade Diegetic & World-Space UI (`hud.gd` & `floating_text.gd`) (`UI_DESIGN §3.4`)
+- [x] **T-052** Upgrade Diegetic & World-Space UI (`hud.gd` & `floating_text.gd`) (`UI_DESIGN §3.4`)
   - **Off-Screen Objective Pointers:** Clamp pointers `32 px` from viewport edges, rotate toward off-screen priority targets (`Boss` or uncaptured `CaptureZone`), and render tactical arrow + distance readout in meters (`%dm`, `TYPE_MICRO`).
   - **Diegetic Reload Reticle:** Render custom crosshair (`2 px` center dot + `4` lines of `6 px`) during `State.PLAYING`; expand line gap by `+8 px` upon firing and contract linearly back to `0 px` tied to remaining `fire_cooldown` (`0.45s`).
   - **Floating Combat Text (`scripts/ui/floating_text.gd`):** Move upward `32 px` over `0.70s` (`ease-out`) and fade out, styled by event type: Normal Kill (`+100`, `TYPE_LABEL`, `UI_TEXT_PRIMARY`), Ricochet Kill (`+200 RICOCHET!`, `TYPE_HEADER`, `SEMANTIC_CRIT`, `1.25x` scale pop), Outpost Secured (`OUTPOST SECURED (+1 HP)`, `TYPE_HEADER`, `SEMANTIC_ALLY`).
   - **DoD:** Reticle dynamically reflects `fire_cooldown`, off-screen arrows display accurate distance `%dm`, and floating combat text reflects normal/ricochet/outpost styling.
-- [ ] **T-053** Overhaul `main_menu.gd`, `pause_menu.gd` & `game_over_menu.gd` with Safety Guards (`UI_DESIGN §4.2`)
+- [x] **T-053** Overhaul `main_menu.gd`, `pause_menu.gd` & `game_over_menu.gd` with Safety Guards (`UI_DESIGN §4.2`)
   - Place modal overlays on `CanvasLayer (layer = 2)` and apply `UIThemeBuilder` styles and `setup_tactical_button` to all buttons (`DEPLOY`, `RESUME`, `REDEPLOY`, `ABORT TO MENU`).
   - **Main Menu (`scripts/ui/main_menu.gd`):** Live battlefield backdrop with dark vignette (`alpha = 0.45`), `TYPE_DISPLAY` title with military accent rule, auto-focused `DEPLOY` button, and bottom control strip (`[WASD] DRIVE  |  [MOUSE] AIM & FIRE  |  [ESC] PAUSE`).
   - **Pause Overlay (`scripts/ui/pause_menu.gd`):** Full-screen dimmer `Color(0.04, 0.05, 0.06, 0.78)`, centered `360 px` tactical card (`TACTICAL PAUSE`, current run stats, quick `AUDIO: ON/OFF` toggle button, `RESUME`, and `ABORT TO MENU` with **Two-Step Abort Protection**: first click switches text to `CONFIRM ABORT?` with `SEMANTIC_DANGER` border for `3.0s`; second click within window exits to Main Menu).
   - **Game Over / Debriefing (`scripts/ui/game_over_menu.gd`):** Trigger after a `0.6s` dramatic delay post-player explosion; show `ARMOR DESTROYED` (`TYPE_DISPLAY`, `UI_TEXT_DANGER`), debriefing stats card (*Final Score*, *Sector Reached*, *Outposts Captured*, *Ricochet Kills*), and `REDEPLOY` button with **`0.8s` Input Lockout Protection** (both `REDEPLOY` button and `Space`/`Enter` shortcuts remain disabled for the first `0.8s` to prevent accidental skip while firing).
   - **DoD:** Two-step abort confirmation and `0.8s` Game Over input lockout work reliably, buttons scale cleanly from center, and `project.godot` stretch settings (`canvas_items` / `expand`) are verified.
-- [ ] **T-054** UI & Full-Loop Verification (`--headless` + Windowed Visual Check)
+- [x] **T-054** UI & Full-Loop Verification (`--headless` + Windowed Visual Check)
   - Run `godot --headless --quit` and automated harness checks covering `MainMenu -> Skirmish HUD -> Boss Damage Trail -> Invasion Zone Badges -> Pause 2-Step Abort -> Game Over 0.8s Lockout -> Redeploy`.
   - **DoD:** Exit code `0`, zero parse/typing/runtime errors, and all `UI_DESIGN` tokens & interactions verified.
 

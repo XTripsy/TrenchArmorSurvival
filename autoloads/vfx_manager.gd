@@ -89,16 +89,23 @@ func spawn_floating_text(pos: Vector2, text: String) -> void:
 	_effect_parent().add_child(instance)
 	instance.global_position = pos
 
+	var text_type := "normal"
+	if text.contains("RICOCHET"):
+		text_type = "ricochet"
+	elif text.contains("OUTPOST") or text.contains("ZONE"):
+		text_type = "outpost"
+	elif text.contains("SECTOR"):
+		text_type = "sector"
+
 	if scene_handles_setup:
-		# T-030's setup() owns the float/fade tween, so it must run once the node is
-		# inside the tree; a tween created outside the tree has no SceneTree to
-		# advance it.
-		instance.call("setup", text)
+		# FloatingText setup supports (text: String, type: String = "normal").
+		if instance.has_method("setup"):
+			instance.call("setup", text, text_type)
 	else:
 		var tween: Tween = create_tween()
 		tween.set_parallel(true)
-		tween.tween_property(instance, "global_position", pos + Vector2(0.0, -30.0), 0.8)
-		tween.tween_property(instance, "modulate:a", 0.0, 0.8)
+		tween.tween_property(instance, "global_position:y", pos.y - 32.0, 0.70).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(instance, "modulate:a", 0.0, 0.70)
 		tween.chain().tween_callback(instance.queue_free)
 
 func _effect_parent() -> Node:

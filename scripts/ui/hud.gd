@@ -1,37 +1,551 @@
 extends CanvasLayer
 
-const MAX_SHIELDS: int = 3
-const SHIELD_BROKEN_COLOR: Color = Color(0.164706, 0.164706, 0.164706, 1)
 const INNER_BOUNDS: Rect2 = Rect2(0.0, 0.0, 1280.0, 720.0)
-const BOSS_BAR_WIDTH: float = 400.0
-const SCREEN_EDGE_MARGIN: float = 52.0
-const ARROW_LENGTH: float = 22.0
-const ARROW_HALF_WIDTH: float = 8.0
-const MINIMAP_SIZE: Vector2 = Vector2(220.0, 124.0)
-const MINIMAP_MARGIN: float = 18.0
-const MINIMAP_PADDING: float = 6.0
-const MINIMAP_ENEMY_LIMIT: int = 80
-const ZONE_NEUTRAL_COLOR: Color = Color("#D9A738")
-const ZONE_CAPTURING_COLOR: Color = Color("#E5C158")
-const ZONE_CONTESTED_COLOR: Color = Color("#FF4444")
-const ZONE_CAPTURED_COLOR: Color = Color("#6B8E23")
-const BOSS_COLOR: Color = Color("#FF4444")
-const ENEMY_BLIP_COLOR: Color = Color("#FF2222")
-const PLAYER_BLIP_COLOR: Color = Color("#9ACD32")
+const SAFE_MARGIN: float = 24.0
+const POINTER_MARGIN: float = 32.0
 
+# Minimap constants
+const MINIMAP_SIZE: Vector2 = Vector2(160.0, 90.0)
+const MINIMAP_ENEMY_LIMIT: int = 80
+
+# Dynamic State
 var _active_bounds: Rect2 = INNER_BOUNDS
 var _boss_hp: int = 0
 var _boss_max_hp: int = 0
-var _tactical: TacticalOverlay = null
+var _boss_trail_hp: float = 0.0
+var _boss_trail_tween: Tween = null
+var _last_score: int = 0
+var _last_player_hp: int = 3
+var _reticle_spread: float = 0.0
 
-@onready var score_label: Label = $HUDRoot/ScoreLabel
-@onready var time_label: Label = $HUDRoot/TimeLabel
-@onready var objective_label: Label = $HUDRoot/ObjectiveLabel
-@onready var objective_bar: Node2D = $HUDRoot/ObjectiveBar
-@onready var bar_fill: Line2D = $HUDRoot/ObjectiveBar/Fill
-@onready var shields: Node2D = $HUDRoot/Shields
-@onready var reticle: Node2D = $HUDRoot/Reticle
+# UI Nodes
+@onready var root: Control = $HUDRoot
 
+# Top-Left Nodes
+var armor_card: PanelContainer
+var armor_container: HBoxContainer
+var _armor_segments: Array[PanelContainer] = []
+var _critical_tween: Tween = null
+
+# Top-Center Nodes
+var phase_card: Control
+var phase_header: Label
+var skirmish_bar: ProgressBar
+var boss_bar_back: PanelContainer
+var boss_bar_trail: StyleBoxFlat
+var boss_bar_fill: StyleBoxFlat
+var boss_bar_fill_panel: Panel
+var boss_bar_trail_panel: Panel
+var invasion_container: HBoxContainer
+var _invasion_badges: Array[PanelContainer] = []
+
+# Top-Right Nodes
+var telemetry_card: VBoxContainer
+var score_label: Label
+var time_label: Label
+
+# Overlay for Diegetic Pointers & Minimap
+var _tactical_overlay: Control = null
+var reticle: Control = null
+
+func get_boss_trail_hp() -> float:
+	return _boss_trail_hp
+
+func _ready() -> void:
+	layer = 1
+	EventBus.score_updated.connect(_on_score_updated)
+	EventBus.player_damaged.connect(_on_player_damaged)
+	EventBus.game_state_changed.connect(_on_game_state_changed)
+	EventBus.phase_changed.connect(_on_phase_changed)
+	EventBus.boss_spawned.connect(_on_boss_spawned)
+	EventBus.boss_hp_changed.connect(_on_boss_hp_changed)
+	EventBus.map_expanded.connect(_on_map_expanded)
+	EventBus.sector_cleared.connect(_on_sector_cleared)
+
+	_build_ui()
+	_refresh_score(GameManager.score)
+	var player: Node = get_tree().get_first_node_in_group("player")
+	var initial_hp: int = 3
+	if player != null and player.get("hp") != null:
+		initial_hp = int(player.get("hp"))
+	_refresh_shields(initial_hp)
+	_refresh_time()
+	_refresh_objective()
+
+func _build_ui() -> void:
+	# 1. Top-Left: Armor Integrity Card
+	armor_card = PanelContainer.new()
+	armor_card.position = Vector2(SAFE_MARGIN, SAFE_MARGIN)
+	armor_card.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_BG_DARK, UIThemeBuilder.UI_BORDER_STEEL))
+	root.add_child(armor_card)
+
+	var armor_vbox := VBoxContainer.new()
+	armor_vbox.add_theme_constant_override("separation", 4)
+	armor_card.add_child(armor_vbox)
+
+	var armor_lbl := Label.new()
+	armor_lbl.text = "ARMOR INTEGRITY"
+	armor_lbl.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
+	armor_vbox.add_child(armor_lbl)
+
+	armor_container = HBoxContainer.new()
+	armor_container.add_theme_constant_override("separation", 4)
+	armor_vbox.add_child(armor_container)
+
+	# 2. Top-Center: Phase & Objective Tracker
+	phase_card = Control.new()
+	phase_card.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	phase_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(phase_card)
+
+	var phase_vbox := VBoxContainer.new()
+	phase_vbox.position = Vector2(1280.0 * 0.5 - 220.0, SAFE_MARGIN)
+	phase_vbox.custom_minimum_size = Vector2(440.0, 60.0)
+	phase_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	phase_card.add_child(phase_vbox)
+
+	phase_header = Label.new()
+	phase_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	phase_header.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_LABEL, UIThemeBuilder.UI_TEXT_PRIMARY)
+	phase_vbox.add_child(phase_header)
+
+	# Skirmish Progress Bar
+	skirmish_bar = ProgressBar.new()
+	skirmish_bar.custom_minimum_size = Vector2(336.0, 12.0)
+	skirmish_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	skirmish_bar.show_percentage = false
+	var skirmish_bg := UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1)
+	var skirmish_fg := UIThemeBuilder.panel_style(UIThemeBuilder.SEMANTIC_WARN, Color.TRANSPARENT, 2, 0)
+	skirmish_bar.add_theme_stylebox_override("background", skirmish_bg)
+	skirmish_bar.add_theme_stylebox_override("fill", skirmish_fg)
+	phase_vbox.add_child(skirmish_bar)
+
+	# Boss Bar (Double layer for trail)
+	boss_bar_back = PanelContainer.new()
+	boss_bar_back.custom_minimum_size = Vector2(440.0, 16.0)
+	boss_bar_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	boss_bar_back.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
+	boss_bar_back.visible = false
+	phase_vbox.add_child(boss_bar_back)
+
+	boss_bar_trail = UIThemeBuilder.panel_style(Color(1, 1, 1, 0.85), Color.TRANSPARENT, 2, 0)
+	boss_bar_trail_panel = Panel.new()
+	boss_bar_trail_panel.add_theme_stylebox_override("panel", boss_bar_trail)
+	boss_bar_back.add_child(boss_bar_trail_panel)
+
+	boss_bar_fill = UIThemeBuilder.panel_style(UIThemeBuilder.SEMANTIC_DANGER, Color.TRANSPARENT, 2, 0)
+	boss_bar_fill_panel = Panel.new()
+	boss_bar_fill_panel.add_theme_stylebox_override("panel", boss_bar_fill)
+	boss_bar_back.add_child(boss_bar_fill_panel)
+
+	# Invasion Badges Container
+	invasion_container = HBoxContainer.new()
+	invasion_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	invasion_container.add_theme_constant_override("separation", 12)
+	invasion_container.visible = false
+	phase_vbox.add_child(invasion_container)
+
+	for i: int in 3:
+		var badge := PanelContainer.new()
+		badge.custom_minimum_size = Vector2(72.0, 24.0)
+		badge.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
+		var lbl := Label.new()
+		lbl.name = "BadgeLabel"
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
+		badge.add_child(lbl)
+		invasion_container.add_child(badge)
+		_invasion_badges.append(badge)
+
+	# 3. Top-Right: Telemetry Panel
+	telemetry_card = VBoxContainer.new()
+	telemetry_card.position = Vector2(1280.0 - SAFE_MARGIN - 200.0, SAFE_MARGIN)
+	telemetry_card.custom_minimum_size = Vector2(200.0, 60.0)
+	telemetry_card.alignment = BoxContainer.ALIGNMENT_END
+	root.add_child(telemetry_card)
+
+	var score_micro := Label.new()
+	score_micro.text = "SCORE"
+	score_micro.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	score_micro.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
+	telemetry_card.add_child(score_micro)
+
+	score_label = Label.new()
+	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	score_label.pivot_offset = Vector2(200.0, 12.0)
+	score_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_METRIC, UIThemeBuilder.UI_TEXT_PRIMARY)
+	telemetry_card.add_child(score_label)
+
+	time_label = Label.new()
+	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	time_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_LABEL, UIThemeBuilder.UI_TEXT_MUTED)
+	telemetry_card.add_child(time_label)
+
+	# 4. Tactical Overlay (_draw for radar & off-screen pointers)
+	_tactical_overlay = Control.new()
+	_tactical_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_tactical_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tactical_overlay: TacticalOverlay = TacticalOverlay.new()
+	tactical_overlay.hud = self
+	_tactical_overlay = tactical_overlay
+	root.add_child(_tactical_overlay)
+
+	# 5. Diegetic Reticle
+	_build_reticle()
+
+func _build_reticle() -> void:
+	reticle = Control.new()
+	reticle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(reticle)
+
+	var dot := ColorRect.new()
+	dot.name = "Dot"
+	dot.size = Vector2(2, 2)
+	dot.position = Vector2(-1, -1)
+	dot.color = UIThemeBuilder.UI_TEXT_PRIMARY
+	reticle.add_child(dot)
+
+	for i: int in 4:
+		var line := ColorRect.new()
+		line.name = "Line%d" % i
+		line.color = UIThemeBuilder.UI_TEXT_PRIMARY
+		reticle.add_child(line)
+
+func _process(delta: float) -> void:
+	_refresh_time()
+	_refresh_objective()
+	_update_reticle(delta)
+
+func _update_reticle(delta: float) -> void:
+	reticle.position = reticle.get_global_mouse_position()
+	reticle.visible = GameManager.state == GameManager.State.PLAYING
+
+	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
+	if player != null and player.has_method("get_fire_cooldown_ratio"):
+		var ratio: float = float(player.call("get_fire_cooldown_ratio"))
+		_reticle_spread = ratio * 8.0
+	else:
+		_reticle_spread = maxf(0.0, _reticle_spread - delta * (8.0 / 0.45))
+
+	var gap: float = 4.0 + _reticle_spread
+	var line_len: float = 6.0
+	var line_w: float = 2.0
+
+	# Top
+	var top: ColorRect = reticle.get_node("Line0") as ColorRect
+	top.position = Vector2(-line_w * 0.5, -gap - line_len)
+	top.size = Vector2(line_w, line_len)
+
+	# Bottom
+	var bot: ColorRect = reticle.get_node("Line1") as ColorRect
+	bot.position = Vector2(-line_w * 0.5, gap)
+	bot.size = Vector2(line_w, line_len)
+
+	# Left
+	var left: ColorRect = reticle.get_node("Line2") as ColorRect
+	left.position = Vector2(-gap - line_len, -line_w * 0.5)
+	left.size = Vector2(line_len, line_w)
+
+	# Right
+	var right: ColorRect = reticle.get_node("Line3") as ColorRect
+	right.position = Vector2(gap, -line_w * 0.5)
+	right.size = Vector2(line_len, line_w)
+
+func _on_score_updated(new_score: int, _ricochet_kills: int) -> void:
+	if new_score > _last_score:
+		_punch_score()
+	_last_score = new_score
+	_refresh_score(new_score)
+
+func _punch_score() -> void:
+	var tween := create_tween()
+	score_label.scale = Vector2(1.2, 1.2)
+	tween.tween_property(score_label, "scale", Vector2(1.0, 1.0), 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func _on_player_damaged(current_hp: int, max_hp: int) -> void:
+	_refresh_shields(current_hp, max_hp)
+
+func _on_game_state_changed(_new_state: int) -> void:
+	reticle.visible = GameManager.state == GameManager.State.PLAYING
+
+func _on_phase_changed(_new_phase: int) -> void:
+	if GameManager.current_phase == GameManager.Phase.SKIRMISH:
+		_boss_hp = 0
+		_boss_max_hp = 0
+		_boss_trail_hp = 0.0
+	_animate_phase_transition()
+	_refresh_objective()
+
+func _animate_phase_transition() -> void:
+	var tween := create_tween()
+	phase_header.modulate.a = 0.0
+	phase_header.position.y = -8.0
+	tween.parallel().tween_property(phase_header, "modulate:a", 1.0, 0.25)
+	tween.parallel().tween_property(phase_header, "position:y", 0.0, 0.25)
+
+func _on_boss_spawned(_boss_name: String, current_hp: int, max_hp: int) -> void:
+	_boss_hp = current_hp
+	_boss_max_hp = max_hp
+	_boss_trail_hp = float(max_hp)
+	_refresh_objective()
+
+func _on_boss_hp_changed(current_hp: int, max_hp: int) -> void:
+	_boss_hp = current_hp
+	_boss_max_hp = max_hp
+	if _boss_trail_tween != null and _boss_trail_tween.is_running():
+		_boss_trail_tween.kill()
+	
+	_boss_trail_tween = create_tween()
+	_boss_trail_tween.tween_interval(0.25)
+	_boss_trail_tween.tween_property(self, "_boss_trail_hp", float(current_hp), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_refresh_objective()
+
+func _on_map_expanded(new_bounds: Rect2) -> void:
+	_active_bounds = new_bounds
+
+func _on_sector_cleared(_sector_num: int, bonus_score: int) -> void:
+	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
+	if player != null:
+		VFXManager.spawn_floating_text(player.global_position, "+%d SECTOR CLEARED!" % bonus_score)
+
+func _refresh_score(value: int) -> void:
+	score_label.text = "%06d" % value
+
+func _refresh_time() -> void:
+	var total: int = maxi(0, floori(GameManager.time_survived))
+	time_label.text = "TIME %02d:%02d" % [total / 60, total % 60]
+
+func _refresh_objective() -> void:
+	match GameManager.current_phase:
+		GameManager.Phase.BOSS:
+			phase_header.text = "WARNING: IRON GOLIATH"
+			phase_header.label_settings.font_color = UIThemeBuilder.UI_TEXT_DANGER
+			skirmish_bar.visible = false
+			boss_bar_back.visible = true
+			invasion_container.visible = false
+
+			if _boss_max_hp > 0:
+				var fill_ratio: float = clampf(float(_boss_hp) / float(_boss_max_hp), 0.0, 1.0)
+				var trail_ratio: float = clampf(_boss_trail_hp / float(_boss_max_hp), 0.0, 1.0)
+				boss_bar_fill_panel.size = Vector2(440.0 * fill_ratio, 16.0)
+				boss_bar_trail_panel.size = Vector2(440.0 * trail_ratio, 16.0)
+
+		GameManager.Phase.INVASION:
+			phase_header.text = "TERRITORY INVASION — CAPTURE OUTPOSTS"
+			phase_header.label_settings.font_color = UIThemeBuilder.UI_TEXT_PRIMARY
+			skirmish_bar.visible = false
+			boss_bar_back.visible = false
+			invasion_container.visible = true
+			_update_invasion_badges()
+
+		_:
+			phase_header.text = "SECTOR %02d — THREAT LEVEL" % GameManager.sector_index
+			phase_header.label_settings.font_color = UIThemeBuilder.UI_TEXT_PRIMARY
+			skirmish_bar.visible = true
+			skirmish_bar.value = GameManager.threat_progress
+			boss_bar_back.visible = false
+			invasion_container.visible = false
+
+func _update_invasion_badges() -> void:
+	var zones: Array[Node] = get_tree().get_nodes_in_group("capture_zone")
+	for i: int in _invasion_badges.size():
+		var badge: PanelContainer = _invasion_badges[i]
+		var lbl: Label = badge.get_node("BadgeLabel") as Label
+		if i < zones.size():
+			var zone: Node2D = zones[i] as Node2D
+			var state: int = int(zone.get("state"))
+			var progress: float = float(zone.get("progress"))
+			match state:
+				1: # CAPTURING
+					badge.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.SEMANTIC_WARN, UIThemeBuilder.UI_BORDER_ACTIVE, 2, 1))
+					lbl.text = "%02d [ ▲ ] %d%%" % [i + 1, int(progress * 100)]
+					lbl.label_settings.font_color = UIThemeBuilder.UI_BG_DARK
+				2: # CONTESTED
+					badge.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.SEMANTIC_DANGER, Color.WHITE, 2, 1))
+					lbl.text = "%02d [ ! ]" % [i + 1]
+					lbl.label_settings.font_color = Color.WHITE
+				3: # CAPTURED
+					badge.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.SEMANTIC_ALLY, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
+					lbl.text = "%02d [ ✓ ]" % [i + 1]
+					lbl.label_settings.font_color = Color.WHITE
+				_: # NEUTRAL
+					badge.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
+					lbl.text = "%02d [ - ]" % [i + 1]
+					lbl.label_settings.font_color = UIThemeBuilder.UI_TEXT_MUTED
+		else:
+			badge.visible = false
+
+func _refresh_shields(current_hp: int, max_hp: int = 3) -> void:
+	# Rebuild segments if needed
+	if _armor_segments.size() != max_hp:
+		for seg: PanelContainer in _armor_segments:
+			seg.queue_free()
+		_armor_segments.clear()
+
+		var seg_width: float = 36.0 if max_hp <= 5 else 28.0
+		for i: int in max_hp:
+			var seg := PanelContainer.new()
+			seg.custom_minimum_size = Vector2(seg_width, 14.0)
+			armor_container.add_child(seg)
+			_armor_segments.append(seg)
+
+	# Flash white on loss
+	if current_hp < _last_player_hp and _last_player_hp <= _armor_segments.size():
+		var lost_idx: int = _last_player_hp - 1
+		if lost_idx >= 0 and lost_idx < _armor_segments.size():
+			_flash_segment_white(_armor_segments[lost_idx])
+	_last_player_hp = current_hp
+
+	# Update styles
+	for i: int in max_hp:
+		var seg: PanelContainer = _armor_segments[i]
+		if i < current_hp:
+			if current_hp == 1:
+				seg.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.SEMANTIC_DANGER, Color("#FF8888"), 2, 1))
+			else:
+				seg.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.SEMANTIC_ALLY, Color("#84C458"), 2, 1))
+		else:
+			seg.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
+
+	# Pulse tween for HP == 1
+	if current_hp == 1:
+		if _critical_tween == null or not _critical_tween.is_running():
+			_critical_tween = create_tween().set_loops()
+			_critical_tween.tween_property(_armor_segments[0], "modulate:a", 0.55, 0.25)
+			_critical_tween.tween_property(_armor_segments[0], "modulate:a", 1.0, 0.25)
+	else:
+		if _critical_tween != null and _critical_tween.is_running():
+			_critical_tween.kill()
+			if _armor_segments.size() > 0:
+				_armor_segments[0].modulate.a = 1.0
+
+func _flash_segment_white(seg: PanelContainer) -> void:
+	var flash_style := UIThemeBuilder.panel_style(Color.WHITE, Color.WHITE, 2, 1)
+	seg.add_theme_stylebox_override("panel", flash_style)
+	var tween := create_tween()
+	tween.tween_interval(0.15)
+	tween.tween_callback(func() -> void:
+		seg.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
+	)
+
+func draw_tactical(canvas: CanvasItem) -> void:
+	if GameManager.state != GameManager.State.PLAYING:
+		return
+	var viewport_size: Vector2 = canvas.get_viewport_rect().size
+	_draw_off_screen_arrows(canvas, viewport_size)
+	_draw_minimap(canvas, viewport_size)
+
+func _draw_off_screen_arrows(canvas: CanvasItem, viewport_size: Vector2) -> void:
+	var center: Vector2 = viewport_size * 0.5
+	var safe_rect: Rect2 = Rect2(Vector2(POINTER_MARGIN, POINTER_MARGIN), viewport_size - Vector2(POINTER_MARGIN, POINTER_MARGIN) * 2.0)
+	var camera: Camera2D = canvas.get_viewport().get_camera_2d()
+
+	for node: Node in get_tree().get_nodes_in_group("capture_zone"):
+		var zone: Node2D = node as Node2D
+		if zone == null or bool(zone.get("captured")):
+			continue
+		var zone_state: int = int(zone.get("state"))
+		_draw_direction_arrow(canvas, viewport_size, center, safe_rect, zone.global_position, camera, _zone_color(zone_state))
+
+	for node: Node in get_tree().get_nodes_in_group("boss"):
+		var boss: Node2D = node as Node2D
+		if boss != null:
+			_draw_direction_arrow(canvas, viewport_size, center, safe_rect, boss.global_position, camera, UIThemeBuilder.SEMANTIC_DANGER)
+
+func _draw_direction_arrow(canvas: CanvasItem, viewport_size: Vector2, center: Vector2, safe_rect: Rect2, world_position: Vector2, camera: Camera2D, color: Color) -> void:
+	var screen_position: Vector2 = canvas.get_viewport().get_canvas_transform() * world_position
+	if safe_rect.has_point(screen_position):
+		return
+	var direction: Vector2 = (screen_position - center)
+	if direction.is_zero_approx():
+		return
+	direction = direction.normalized()
+	var half: Vector2 = viewport_size * 0.5 - Vector2(POINTER_MARGIN, POINTER_MARGIN)
+	var scale_x: float = INF
+	var scale_y: float = INF
+	if absf(direction.x) > 0.001:
+		scale_x = half.x / absf(direction.x)
+	if absf(direction.y) > 0.001:
+		scale_y = half.y / absf(direction.y)
+	var distance: float = minf(scale_x, scale_y)
+	var tip: Vector2 = center + direction * distance
+	var base: Vector2 = tip - direction * 18.0
+	var side: Vector2 = direction.orthogonal() * 6.0
+	var points: PackedVector2Array = PackedVector2Array([tip, base + side, base - side])
+	canvas.draw_colored_polygon(points, color)
+
+	# Distance label in meters (%dm)
+	var dist_m: int = int((world_position - (camera.global_position if camera != null else center)).length() / 10.0)
+	var text := "%dm" % dist_m
+	var font := UIThemeBuilder.build_system_font()
+	canvas.draw_string(font, tip - direction * 30.0 + Vector2(-10, 4), text, HORIZONTAL_ALIGNMENT_CENTER, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_PRIMARY)
+
+func _draw_minimap(canvas: CanvasItem, viewport_size: Vector2) -> void:
+	var rect := Rect2(Vector2(viewport_size.x - MINIMAP_SIZE.x - SAFE_MARGIN, SAFE_MARGIN + 60.0), MINIMAP_SIZE)
+
+	# Frame
+	canvas.draw_rect(rect, UIThemeBuilder.UI_BG_DARK)
+	canvas.draw_rect(rect, UIThemeBuilder.UI_BORDER_STEEL, false, 2.0)
+
+	# Crosshair internal grid
+	canvas.draw_line(Vector2(rect.position.x + rect.size.x * 0.5, rect.position.y), Vector2(rect.position.x + rect.size.x * 0.5, rect.end.y), Color(1, 1, 1, 0.12), 1.0)
+	canvas.draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y * 0.5), Vector2(rect.end.x, rect.position.y + rect.size.y * 0.5), Color(1, 1, 1, 0.12), 1.0)
+
+	var inner := rect.grow(-4.0)
+
+	# 1. Bounds / Obstacles
+	for node: Node in get_tree().get_nodes_in_group("bouncy_surface"):
+		var obs: Node2D = node as Node2D
+		if obs != null:
+			canvas.draw_rect(Rect2(_to_minimap(obs.global_position, inner) - Vector2(3, 3), Vector2(6, 6)), UIThemeBuilder.UI_SURFACE)
+
+	# 2. Capture Zones
+	for node: Node in get_tree().get_nodes_in_group("capture_zone"):
+		var zone: Node2D = node as Node2D
+		if zone == null:
+			continue
+		var point: Vector2 = _to_minimap(zone.global_position, inner)
+		canvas.draw_circle(point, 6.0, _zone_color(int(zone.get("state"))))
+
+	# 3. Enemies & Boss
+	var enemies: Array[Node] = get_tree().get_nodes_in_group("enemy")
+	var limit: int = mini(enemies.size(), MINIMAP_ENEMY_LIMIT)
+	for i: int in limit:
+		var enemy: Node2D = enemies[i] as Node2D
+		if enemy != null:
+			canvas.draw_circle(_to_minimap(enemy.global_position, inner), 2.5, UIThemeBuilder.SEMANTIC_DANGER)
+
+	for node: Node in get_tree().get_nodes_in_group("boss"):
+		var boss: Node2D = node as Node2D
+		if boss != null:
+			var point: Vector2 = _to_minimap(boss.global_position, inner)
+			canvas.draw_circle(point, 5.0, UIThemeBuilder.SEMANTIC_DANGER)
+			canvas.draw_arc(point, 6.0, 0.0, TAU, 12, Color.WHITE, 1.5)
+
+	# 4. Player
+	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
+	if player != null:
+		var p_pos: Vector2 = _to_minimap(player.global_position, inner)
+		canvas.draw_circle(p_pos, 3.5, Color.WHITE)
+		var turret_dir: Vector2 = Vector2.RIGHT.rotated(player.rotation)
+		canvas.draw_line(p_pos, p_pos + turret_dir * 8.0, Color.WHITE, 1.5)
+
+func _to_minimap(world_position: Vector2, inner: Rect2) -> Vector2:
+	var normalized: Vector2 = (world_position - _active_bounds.position) / _active_bounds.size
+	normalized = Vector2(clampf(normalized.x, 0.0, 1.0), clampf(normalized.y, 0.0, 1.0))
+	return inner.position + normalized * inner.size
+
+func _zone_color(zone_state: int) -> Color:
+	match zone_state:
+		1:
+			return UIThemeBuilder.SEMANTIC_WARN
+		2:
+			return UIThemeBuilder.SEMANTIC_DANGER
+		3:
+			return UIThemeBuilder.SEMANTIC_ALLY
+		_:
+			return UIThemeBuilder.UI_SURFACE
 
 class TacticalOverlay:
 	extends Control
@@ -48,183 +562,3 @@ class TacticalOverlay:
 	func _draw() -> void:
 		if hud != null:
 			hud.call("draw_tactical", self)
-
-
-func _ready() -> void:
-	EventBus.score_updated.connect(_on_score_updated)
-	EventBus.player_damaged.connect(_on_player_damaged)
-	EventBus.game_state_changed.connect(_on_game_state_changed)
-	EventBus.phase_changed.connect(_on_phase_changed)
-	EventBus.boss_spawned.connect(_on_boss_spawned)
-	EventBus.boss_hp_changed.connect(_on_boss_hp_changed)
-	EventBus.map_expanded.connect(_on_map_expanded)
-	EventBus.sector_cleared.connect(_on_sector_cleared)
-	_refresh_score(GameManager.score)
-	_refresh_shields(MAX_SHIELDS)
-	_refresh_time()
-	_refresh_objective()
-	_tactical = TacticalOverlay.new()
-	_tactical.hud = self
-	$HUDRoot.add_child(_tactical)
-
-func _process(_delta: float) -> void:
-	_refresh_time()
-	_refresh_objective()
-	reticle.position = get_viewport().get_mouse_position()
-	reticle.visible = GameManager.state == GameManager.State.PLAYING
-
-func _on_score_updated(new_score: int, _ricochet_kills: int) -> void:
-	_refresh_score(new_score)
-
-func _on_player_damaged(current_hp: int, _max_hp: int) -> void:
-	_refresh_shields(current_hp)
-
-func _on_game_state_changed(_new_state: int) -> void:
-	reticle.visible = GameManager.state == GameManager.State.PLAYING
-
-func _on_phase_changed(_new_phase: int) -> void:
-	if GameManager.current_phase == GameManager.Phase.SKIRMISH:
-		_boss_hp = 0
-		_boss_max_hp = 0
-	_refresh_objective()
-
-func _on_boss_spawned(_boss_name: String, current_hp: int, max_hp: int) -> void:
-	_boss_hp = current_hp
-	_boss_max_hp = max_hp
-	_refresh_objective()
-
-func _on_boss_hp_changed(current_hp: int, max_hp: int) -> void:
-	_boss_hp = current_hp
-	_boss_max_hp = max_hp
-	_refresh_objective()
-
-func _on_map_expanded(new_bounds: Rect2) -> void:
-	_active_bounds = new_bounds
-
-func _on_sector_cleared(_sector_num: int, bonus_score: int) -> void:
-	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
-	if player != null:
-		VFXManager.spawn_floating_text(player.global_position, "+%d SECTOR CLEARED!" % bonus_score)
-
-func _refresh_score(value: int) -> void:
-	score_label.text = "SCORE: %06d" % value
-
-func _refresh_time() -> void:
-	var total: int = maxi(0, floori(GameManager.time_survived))
-	time_label.text = "TIME: %02d:%02d" % [total / 60, total % 60]
-
-func _refresh_objective() -> void:
-	match GameManager.current_phase:
-		GameManager.Phase.BOSS:
-			objective_label.text = "IRON GOLIATH HP"
-			objective_bar.visible = true
-			var ratio: float = 0.0
-			if _boss_max_hp > 0:
-				ratio = clampf(float(_boss_hp) / float(_boss_max_hp), 0.0, 1.0)
-			bar_fill.points = PackedVector2Array([Vector2.ZERO, Vector2(BOSS_BAR_WIDTH * ratio, 0.0)])
-		GameManager.Phase.INVASION:
-			objective_label.text = "ZONES CAPTURED: %d/%d" % [GameManager.zones_captured, GameManager.zones_total]
-			objective_bar.visible = false
-		_:
-			objective_label.text = "THREAT: %d%%" % int(round(GameManager.threat_progress))
-			objective_bar.visible = false
-
-func _refresh_shields(current_hp: int) -> void:
-	for i: int in MAX_SHIELDS:
-		var shield: Node2D = shields.get_node_or_null("Shield%d" % (i + 1)) as Node2D
-		if shield == null:
-			continue
-		var broken: bool = i >= current_hp
-		var plate: Polygon2D = shield.get_node_or_null("Plate") as Polygon2D
-		var crack: Line2D = shield.get_node_or_null("Crack") as Line2D
-		if plate != null:
-			plate.modulate = SHIELD_BROKEN_COLOR if broken else Color.WHITE
-		if crack != null:
-			crack.visible = broken
-
-func draw_tactical(canvas: CanvasItem) -> void:
-	if GameManager.state != GameManager.State.PLAYING:
-		return
-	var viewport_size: Vector2 = canvas.get_viewport_rect().size
-	_draw_off_screen_arrows(canvas, viewport_size)
-	_draw_minimap(canvas, viewport_size)
-
-func _draw_off_screen_arrows(canvas: CanvasItem, viewport_size: Vector2) -> void:
-	var center: Vector2 = viewport_size * 0.5
-	var safe_rect: Rect2 = Rect2(Vector2(SCREEN_EDGE_MARGIN, SCREEN_EDGE_MARGIN), viewport_size - Vector2(SCREEN_EDGE_MARGIN, SCREEN_EDGE_MARGIN) * 2.0)
-	for node: Node in get_tree().get_nodes_in_group("capture_zone"):
-		var zone: Node2D = node as Node2D
-		if zone == null or bool(zone.get("captured")):
-			continue
-		var zone_state: int = int(zone.get("state"))
-		_draw_direction_arrow(canvas, viewport_size, center, safe_rect, zone.global_position, _zone_color(zone_state))
-	for node: Node in get_tree().get_nodes_in_group("boss"):
-		var boss: Node2D = node as Node2D
-		if boss != null:
-			_draw_direction_arrow(canvas, viewport_size, center, safe_rect, boss.global_position, BOSS_COLOR)
-
-func _draw_direction_arrow(canvas: CanvasItem, viewport_size: Vector2, center: Vector2, safe_rect: Rect2, world_position: Vector2, color: Color) -> void:
-	var screen_position: Vector2 = canvas.get_viewport().get_canvas_transform() * world_position
-	if safe_rect.has_point(screen_position):
-		return
-	var direction: Vector2 = (screen_position - center)
-	if direction.is_zero_approx():
-		return
-	direction = direction.normalized()
-	var half: Vector2 = viewport_size * 0.5 - Vector2(SCREEN_EDGE_MARGIN, SCREEN_EDGE_MARGIN)
-	var scale_x: float = INF
-	var scale_y: float = INF
-	if absf(direction.x) > 0.001:
-		scale_x = half.x / absf(direction.x)
-	if absf(direction.y) > 0.001:
-		scale_y = half.y / absf(direction.y)
-	var distance: float = minf(scale_x, scale_y)
-	var tip: Vector2 = center + direction * distance
-	var base: Vector2 = tip - direction * ARROW_LENGTH
-	var side: Vector2 = direction.orthogonal() * ARROW_HALF_WIDTH
-	var points: PackedVector2Array = PackedVector2Array([tip, base + side, base - side])
-	canvas.draw_colored_polygon(points, color)
-	canvas.draw_line(base - direction * 10.0, base, color, 3.0, true)
-
-func _draw_minimap(canvas: CanvasItem, viewport_size: Vector2) -> void:
-	var rect: Rect2 = Rect2(Vector2(viewport_size.x - MINIMAP_SIZE.x - MINIMAP_MARGIN, MINIMAP_MARGIN), MINIMAP_SIZE)
-	canvas.draw_rect(rect, Color(0.05, 0.05, 0.05, 0.7))
-	canvas.draw_rect(rect, Color(0.85, 0.788235, 0.639216, 0.85), false, 2.0)
-	var inner: Rect2 = rect.grow(-MINIMAP_PADDING)
-	canvas.draw_rect(inner, Color(0.23, 0.18, 0.16, 0.65))
-	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
-	if player != null:
-		canvas.draw_circle(_to_minimap(player.global_position, inner), 4.0, PLAYER_BLIP_COLOR)
-	for node: Node in get_tree().get_nodes_in_group("capture_zone"):
-		var zone: Node2D = node as Node2D
-		if zone == null:
-			continue
-		var point: Vector2 = _to_minimap(zone.global_position, inner)
-		canvas.draw_circle(point, 6.0, _zone_color(int(zone.get("state"))))
-		canvas.draw_arc(point, 8.0, 0.0, TAU, 16, Color(0.85, 0.788235, 0.639216, 0.9), 1.5, true)
-	for node: Node in get_tree().get_nodes_in_group("boss"):
-		var boss: Node2D = node as Node2D
-		if boss != null:
-			canvas.draw_circle(_to_minimap(boss.global_position, inner), 5.0, BOSS_COLOR)
-	var enemies: Array[Node] = get_tree().get_nodes_in_group("enemy")
-	var limit: int = mini(enemies.size(), MINIMAP_ENEMY_LIMIT)
-	for i: int in limit:
-		var enemy: Node2D = enemies[i] as Node2D
-		if enemy != null:
-			canvas.draw_circle(_to_minimap(enemy.global_position, inner), 2.0, ENEMY_BLIP_COLOR)
-
-func _to_minimap(world_position: Vector2, inner: Rect2) -> Vector2:
-	var normalized: Vector2 = (world_position - _active_bounds.position) / _active_bounds.size
-	normalized = Vector2(clampf(normalized.x, 0.0, 1.0), clampf(normalized.y, 0.0, 1.0))
-	return inner.position + normalized * inner.size
-
-func _zone_color(zone_state: int) -> Color:
-	match zone_state:
-		1:
-			return ZONE_CAPTURING_COLOR
-		2:
-			return ZONE_CONTESTED_COLOR
-		3:
-			return ZONE_CAPTURED_COLOR
-		_:
-			return ZONE_NEUTRAL_COLOR
