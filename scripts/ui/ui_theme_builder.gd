@@ -10,6 +10,8 @@ const UI_ORNAMENT_DIM := Color("#6E7A87bf")
 const UI_BORDER_ACTIVE := Color("#E0AF3E")
 const UI_TEXT_PRIMARY := Color("#F4F1EA")
 const UI_TEXT_MUTED := Color("#A8B2BC")
+const UI_TEXT_KEYCAP := Color("#FFFFFF")
+const UI_TEXT_KEYCAP_ACTION := Color("#E0AF3E")
 const UI_TEXT_DANGER := Color("#FF6B6B")
 
 const SEMANTIC_ALLY := Color("#5E943B")
@@ -67,7 +69,7 @@ func create_keycap_badge(key_text: String, action_text: String) -> Control:
 	hbox.add_child(key_lbl)
 	var act_lbl: Label = Label.new()
 	act_lbl.text = action_text
-	act_lbl.label_settings = create_label_settings(TYPE_MICRO, UI_TEXT_MUTED, 0)
+	act_lbl.label_settings = create_label_settings(TYPE_MICRO, UI_TEXT_KEYCAP_ACTION, 0)
 	hbox.add_child(act_lbl)
 	var bevel: ColorRect = ColorRect.new()
 	bevel.custom_minimum_size = Vector2(0, 2)

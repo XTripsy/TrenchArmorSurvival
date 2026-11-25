@@ -4,7 +4,10 @@ const BEST_SCORE_SETTING: String = "application/config/best_score"
 const REPORT_CONTENT_TOP: float = 120.0
 const REPORT_CONTENT_WIDTH: float = 460.0
 const REPORT_CONTENT_HEIGHT: float = 300.0
+const RECORD_BADGE_TOP: float = 272.0
+const RECORD_BADGE_HEIGHT: float = 28.0
 var _is_redeploying: bool = false
+var _report_card: PanelContainer
 
 @onready var overlay: Control = $Overlay
 @onready var header_label: Label = $Overlay/HeaderLabel
@@ -31,19 +34,22 @@ func _ready() -> void:
 		_show_stats()
 
 func _build_report_decoration() -> void:
-	var report_card: PanelContainer = PanelContainer.new()
-	report_card.name = "ReportCard"
-	report_card.position = Vector2(410, REPORT_CONTENT_TOP)
-	report_card.custom_minimum_size = Vector2(REPORT_CONTENT_WIDTH, REPORT_CONTENT_HEIGHT)
-	report_card.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_BG_DARK, UIThemeBuilder.UI_BORDER_STEEL, 4, 2))
-	overlay.add_child(report_card)
+	_report_card = PanelContainer.new()
+	_report_card.name = "ReportCard"
+	_report_card.position = Vector2(410, REPORT_CONTENT_TOP)
+	_report_card.custom_minimum_size = Vector2(REPORT_CONTENT_WIDTH, REPORT_CONTENT_HEIGHT)
+	_report_card.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_BG_DARK, UIThemeBuilder.UI_BORDER_STEEL, 4, 2))
+	overlay.add_child(_report_card)
 
 	var frame: TacticalFrame = TacticalFrame.new()
 	frame.show_brackets = true
 	frame.show_scanlines = true
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	report_card.add_child(frame)
+	_report_card.add_child(frame)
+	stats_label.reparent(_report_card)
+	stats_label.position = Vector2(0, 108)
+	stats_label.size = Vector2(REPORT_CONTENT_WIDTH, 132)
 
 	var report_label: Label = Label.new()
 	report_label.text = "AFTER-ACTION COMBAT REPORT"
@@ -102,11 +108,11 @@ func _show_debrief() -> void:
 	]
 	if _record_badge == null:
 		_record_badge = Label.new()
-		_record_badge.position = Vector2(440, 400)
-		_record_badge.size = Vector2(400, 28)
+		_record_badge.position = Vector2(0, RECORD_BADGE_TOP)
+		_record_badge.size = Vector2(REPORT_CONTENT_WIDTH, RECORD_BADGE_HEIGHT)
 		_record_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_record_badge.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_HEADER, UIThemeBuilder.UI_BORDER_ACTIVE)
-		overlay.add_child(_record_badge)
+		_record_badge.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_HEADER, UIThemeBuilder.UI_BORDER_ACTIVE, 2)
+		_report_card.add_child(_record_badge)
 	_record_badge.text = "NEW RECORD!" if is_record else ""
 	_rank_stamp.rank_text = _rank_for_score(GameManager.score)
 	_rank_stamp.visible = true

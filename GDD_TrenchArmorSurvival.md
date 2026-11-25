@@ -1,31 +1,36 @@
-# Game Design Document (GDD): Trench Armor Survival
+# Game Design Document (GDD): Trench Armor Survival (Playtest Edition)
 
 ## 1. Game Overview & Design Pillars
 
 ### 1.1. Game Identity
-* **Title:** Trench Armor Survival (Working Title)
-* **Genre:** Top-Down Arcade Shooter, Endless Arena Survival, Tactical Action
+* **Title:** Trench Armor Survival (Playtest Build)
+* **Genre:** Top-Down Arcade Shooter, Boss Encounter, Territory Invasion, Arena Survival
 * **Target Platform:** PC (Windows/Linux via Keyboard & Mouse)
 * **Perspective:** 2D Top-Down Orthographic
 * **Art Style:** Stylized 2D WW1/WW2 Gritty Military (100% Zero Frame-by-Frame Animation)
 
 ### 1.2. Elevator Pitch
-A fast-paced arcade survival game set on a WW1/WW2-era battlefield, where the player controls an armored tank with independently controlled hull movement and cannon aiming. Survive waves of enemy war machines by using bullet ricochets off steel barricades to destroy enemies from unexpected angles. The entire combat experience is delivered through momentum-based physics, thick smoke, mud, and particle effects, without using any frame-by-frame sprite animation.
+A fast-paced arcade action-survival game set on a stylized WW1/WW2 battlefield where the player commands an armored tank with independent hull movement and turret aiming. Fight through skirmish waves to draw out a heavy **Boss**, shatter the outer perimeter upon defeating it to **expand the battlefield**, and launch a **Territory Invasion** to capture fortified zones across the enlarged map.
 
 ### 1.3. Design Pillars
-1. **Tactical Ricochet:** Shooting directly is ordinary; using steel-wall angles to destroy enemies from unexpected directions is the core of the gameplay experience.
-2. **Heavy Mechanical Feel:** Although the game is 2D and uses no character animation, the tank must feel heavy, powerful, and deadly through recoil, muddy track marks, camera shake, and booming audio.
-3. **Readable Chaos:** Amid large amounts of smoke, projectiles, and explosions, the silhouettes of key objects (player, enemies, and active bullets) must remain high-contrast and immediately readable.
+1. **Tactical Ricochet:** Direct fire handles light threats, while bouncing shots off steel walls (1 bounce, fiery orange `#FF5500`, 2x score and bonus damage against heavy/boss armor) unlocks angles behind cover.
+2. **Escalating Battlefield (Skirmish → Boss → Expansion → Invasion):** Combat scales from a tight initial arena (`1280x720`) into a boss duel, then opens into a wider warzone (`2560x1440`) with active capture objectives so the playtest feels expansive and goal-driven.
+3. **Heavy Mechanical Feel & Readable Chaos:** Recoil, muddy track marks, hit-stop, screen shake, and synthesized/procedural audio deliver weight without sprite-sheet animations, while silhouettes and objective pointers keep the expanded map readable.
 
 ---
 
-## 2. Core Gameplay Loop & Game States
+## 2. Core Gameplay Loop & Progression Phases
 
-1. **Deployment (Start):** The player spawns at the center of a battlefield arena surrounded by barricades.
-2. **Engagement (Combat):** Waves of enemy armored vehicles enter from outside the arena boundaries and begin hunting the player.
-3. **Execution (Maneuver & Ricochet):** The player maneuvers to avoid being surrounded, finds direct or ricochet firing angles, and destroys targets.
-4. **Escalation (Progression):** Each destroyed enemy increases the player's score (with a multiplier for ricochet shots). As time passes, enemy spawn intervals become shorter and enemy types become more dangerous.
-5. **Resolution (Game Over):** When the player's Armor Integrity (HP) reaches $0$, the player's tank explodes, the game stops, the final combat statistics are displayed, and the player is given the option to Deploy Again (Restart).
+A playtest run progresses through structured escalating phases per sector (with looping escalation if a sector is cleared):
+
+1. **Deployment (Start):** The player spawns at the center of the **Inner Sector** (`1280x720`) surrounded by barricades and destructible expansion barriers.
+2. **Phase 1 — Skirmish & Threat Escalation:** Enemy waves enter through gates and build up the **Threat / Boss Gauge** as enemies are destroyed.
+3. **Phase 2 — Boss Encounter ("Iron Goliath"):** Once the Threat Gauge reaches `100%`, regular wave pressure eases/shifts and the **Boss** enters to anchor the sector boundary.
+4. **Phase 3 — Map Expansion:** Destroying the Boss blasts open/removes the inner sector expansion walls, expands the playable arena & camera bounds into the **Outer Expansion Sector** (`2560x1440`), and activates **3 Capture Zones (Invasion Objectives)** with defenders.
+5. **Phase 4 — Territory Invasion:** The player pushes into the expanded map to capture all **3 Capture Zones** (holding inside each zone while clearing/contesting enemies), earning score, zone capture rewards, and `+1 HP` recovery per captured zone (up to `MAX_HP`).
+6. **Sector Clear / Loop or Game Over:**
+   * Capturing all zones in the sector completes the invasion objective, grants a sector clear bonus, and escalates into the next cycle/sector (`Sector +1`) with tougher scaling.
+   * Reaching `0 HP` in any phase triggers **Game Over** with final stats and instant **Redeploy**.
 
 ---
 
@@ -33,137 +38,110 @@ A fast-paced arcade survival game set on a WW1/WW2-era battlefield, where the pl
 
 ### 3.1. Dual-Entity Control System
 The player tank consists of two static visual components that rotate independently:
-* **Hull (Tank Body):** Controlled using `W, A, S, D` or `Arrow Keys` (8-directional movement). The hull smoothly interpolates to face its current movement vector.
-* **Turret (Cannon Assembly):** Rotates instantly and continuously to track the `Mouse` cursor position.
-* **Reticle (Cursor Aim):** The system mouse cursor is replaced with a military-style crosshair icon.
+* **Hull (Tank Body):** Controlled using `W, A, S, D` or `Arrow Keys` (8-directional movement). The hull smoothly interpolates to face its current movement vector (`TURN_SPEED = 10.0 rad/s`).
+* **Turret (Cannon Assembly):** Rotates continuously to track the `Mouse` cursor position.
+* **Reticle (Cursor Aim):** The system mouse cursor is replaced with a military crosshair in `PLAYING`, and restored in menus and overlays.
 
 ### 3.2. Combat & Ricochet Mechanics
-* **Primary Fire:** Left-click to fire a high-velocity cannon projectile.
-* **Ricochet Rule:** When a player bullet hits an arena boundary wall or steel barricade, it bounces according to the law of perfect reflection, where the angle of incidence equals the angle of reflection ($\theta_i = \theta_r$).
-* **Ricochet Limit & Bonus:** A bullet can bounce a maximum of $1\text{ time}$ (it is destroyed on its second wall impact). After bouncing once, the bullet changes color to bright orange (heated metal effect) and grants **2x Score** if it successfully kills an enemy.
-* **No Self-Damage:** Bouncing player bullets cannot damage the player, allowing aggressive trick shots in tight spaces.
+* **Primary Fire:** Left-click (`shoot`) to fire a high-velocity cannon projectile (`650 px/s`, `0.45s` cooldown).
+* **Ricochet Rule:** When a player bullet hits a steel wall or bunker (`"bouncy_surface"`), it bounces once ($\theta_i = \theta_r$), turns bright orange (`#FF5500`), and grants **2x Score** on kills (plus bonus damage against the Boss). It is destroyed on its second wall impact.
+* **No Self-Damage:** Bouncing player bullets cannot damage the player.
 
 ### 3.3. Player Parameter Table
 
 | Parameter | Value | Unit | Description |
 | :--- | :--- | :--- | :--- |
-| Max HP | 3 | Hit Points | Number of hits the player can take before being destroyed |
-| Move Speed | 220 | Pixels/second | Maximum movement speed |
-| Hull Turn Speed | 10 | Radians/second | Hull rotation speed while turning |
-| Fire Cooldown | 0.45 | Seconds | Delay between cannon shots |
-| Recoil Force | 40 | Pixels | Instant backward impulse when firing |
+| Max HP | 3 | Hit Points | Base armor integrity; capturing an Invasion Zone restores +1 HP (up to Max HP) |
+| Move Speed | 220 | Pixels/second | Base movement speed (`0.65x` inside Mud Craters) |
+| Hull Turn Speed | 10 | Radians/second | Hull rotation speed while moving |
+| Fire Cooldown | 0.45 | Seconds | Delay between primary cannon shots |
+| Recoil Force | 40 | Pixels | Backward impulse scalar when firing |
 | Bullet Speed | 650 | Pixels/second | Player projectile speed |
-| Max Bounces | 1 | Bounces | Maximum number of wall bounces per bullet |
-| I-Frames Duration | 1.2 | Seconds | Temporary invulnerability duration after taking damage |
+| Max Bounces | 1 | Bounces | Maximum wall bounces before destruction on next impact |
+| I-Frames Duration | 1.2 | Seconds | Invulnerability window after taking damage |
 
 ---
 
-## 4. Enemy Design & AI Behavior
+## 4. Enemy Design, Boss & Invasion Defenders
 
-All enemies use static images without animation and are destroyed by $1\text{ player shot}$, except for the Heavy Armor type.
+### 4.1. Standard Archetypes
+1. **Scout Car "Rammer" (`HP: 1`, `Speed: 250`, `Score: 100`):** Light armored car with spiked bumper; rushes straight toward the player and explodes on contact for `1` damage.
+2. **Light Artillery Tank (`HP: 1`, `Speed: 110`, `Fire: 2.5s`, `Bullet: 400`, `Score: 200`):** Stops at `<= 350 px` from the player and fires straight non-ricocheting shells.
+3. **Heavy Dreadnought (`HP: 2`, `Speed: 70`, `Fire: 3.5s`, `Bullet: 350`, `Score: 500`):** Slow armored bruiser; requires `2` direct hits or `1` ricochet shot to destroy.
 
-### 4.1. Archetypes
-1. **Scout Car "Rammer" (Fast Melee):**
-   * **Visual:** A light armored car without a cannon, painted dull brown, with a spiked front bumper.
-   * **Behavior:** Continuously moves straight toward the player's position.
-   * **Attack:** Rams the player's hull head-on (deals $1\text{ HP}$ damage to the player, then the enemy vehicle also explodes and is destroyed).
-2. **Light Artillery Tank (Ranged Sniper):**
-   * **Visual:** A box-shaped tank with a long cannon barrel, painted dark gray in a German/World War style.
-   * **Behavior:** Slowly moves into the arena. It stops completely when it is within $\le 350\text{ pixels}$ of the player and begins rotating its cannon to aim at the player.
-   * **Attack:** Fires a straight cannon projectile every $2.5\text{ seconds}$. Enemy bullets **cannot ricochet** off walls.
-3. **Heavy Dreadnought (Slow Bruiser):**
-   * **Visual:** A massive WW1 Mark V-style tank with thick armor plates.
-   * **Behavior:** Moves very slowly toward the player while firing occasionally.
-   * **Special Trait:** Has $2\text{ HP}$ against ordinary direct shots, but is destroyed instantly by $1\text{ Ricochet Shot}$ from the side/rear.
+### 4.2. Boss Archetype: "Iron Goliath"
+* **Role:** Sector Guardian that gates Map Expansion.
+* **Visual & Scale:** Oversized heavy tank (`~2.4x` player scale, `#36393F` / `#8B3A3A` armor plating, high-contrast outline).
+* **Stats & Combat Behavior:**
+  * **HP:** `16` HP (`+4` HP per additional sector). Direct shot = `1` damage; ricochet shot = `2` damage.
+  * **Attack Pattern 1 — Fan / Spread Volley:** Fires a 3-way spread of enemy projectiles toward the player.
+  * **Attack Pattern 2 — Mortar Telegraph Zone:** Marks a circular danger zone on the ground with a brief warning telegraph before detonation, forcing movement.
+  * **Attack Pattern 3 — Heavy Advance:** Advances steadily toward the player/center lane between volleys.
+  * **Defeat:** Triggers explosion VFX, camera shake, hit-stop, score award (`1500` base score), and **Map Expansion**.
 
-### 4.2. Enemy Parameter Table
-
-| Enemy Type | HP | Speed (px/s) | Fire Rate (s) | Bullet Speed | Base Score |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| Scout Rammer | 1 | 250 | Does not fire | 0 | 100 Points |
-| Light Artillery | 1 | 110 | 2.5 | 400 px/s | 200 Points |
-| Heavy Dreadnought | 2 | 70 | 3.5 | 350 px/s | 500 Points |
+### 4.3. Invasion Defenders (Expansion Sector)
+* **Pillbox / Outpost Turret (`HP: 3`, `Score: 300`):** Stationary emplacement guarding Capture Zones in the expanded arena, aiming at the player and firing periodic straight shells (`enemy_bullet`) until destroyed.
+* **Patrol / Reinforcement Units:** Scout, Artillery, and Dreadnought units patrol or reinforce contested zones during Territory Invasion.
 
 ---
 
-## 5. Arena, Obstacles & Camera Design
+## 5. Arena, Map Expansion & Territory Invasion Mechanics
 
-### 5.1. Arena & Camera Layout
-* **Arena Size:** $1280 \times 720\text{ pixels}$ (one fixed full-screen view / fixed camera). The camera does not follow the player's movement; it only moves slightly when the Screen Shake effect occurs.
-* **Perimeter Walls:** All four screen edges are enclosed by concrete and steel barricades, with open gate gaps on the outer boundary to allow enemies to enter.
+### 5.1. Inner Arena & Expanded Invasion Arena
+* **Inner Sector (Skirmish & Boss):** `1280 x 720` pixels, enclosed by `SteelBunker` ricochet mirrors, `SandbagBarricade` cover, `MudCrater` hazards, and expandable border barriers.
+* **Expanded Invasion Sector:** Expands to `2560 x 1440` pixels (`2x` width and `2x` height). Outer perimeter walls enclose the expanded map while inner expansion barriers open so the player can drive out into new quadrants.
+* **Camera Behavior:** Centered within the `1280x720` inner sector during initial combat, then smoothly tracks the player clamped within the expanded `2560x1440` arena boundaries (plus screen shake offsets).
 
-### 5.2. Environmental Obstacles (Inside the Arena)
-To maximize the bullet ricochet mechanic, the center of the arena contains $4\text{ to }6$ static obstacles:
-1. **Steel Tank Traps / Bunkers (Indestructible):** Angled steel blocks that cannot be destroyed. They act as bullet-reflecting surfaces and permanent cover.
-2. **Sandbag Barricades (Destructible):** Sandbag piles that block tanks and bullets, but are destroyed into pieces after receiving a total of $3\text{ bullet hits}$ (from either the player or enemies). Bullets **do not ricochet** off sandbags.
-3. **Mud Craters (Terrain Hazard):** Dark, mud-filled blast craters on the ground. Bullets can pass over them, but tanks (player and enemies) moving through the mud have their movement speed reduced by $35\%$.
+### 5.2. Territory Invasion (Capture Zones)
+* **Layout:** `3` **Capture Zones** activate in distinct quadrants of the expanded sector outside the starting core.
+* **Capture Rules:**
+  * Each Capture Zone has a circular capture radius (`180 px`) rendered procedurally on the ground.
+  * **Capturing:** When the player is inside the zone and no enemies are inside the zone, capture progress increases (`+15%/s`, ~`6.7s` to capture).
+  * **Contested:** If an enemy enters the zone while progress `< 100%`, progress pauses and displays a `CONTESTED` state until enemies inside are cleared.
+  * **Captured (`100%`):** Locks the zone as captured, triggers a visual pulse + floating text (`+500 ZONE CAPTURED!`), restores `+1 HP` to the player (up to `MAX_HP`), and counts toward **Sector Clear**.
 
----
-
-## 6. Pacing, Escalation & Spawner Logic
-
-The game is not divided into levels. Instead, it is a single Endless session controlled by a time-based director:
-
-* **Initial Spawn Interval:** $3.0\text{ seconds}$ per enemy.
-* **Difficulty Scaling Formula:** Every $15\text{ seconds}$ of gameplay, the spawn interval is reduced by $0.15\text{ seconds}$ until it reaches the minimum cap of $0.8\text{ seconds}$ per enemy:
-  $$T_{\text{spawn}} = \max(0.8, 3.0 - 0.15 \times \lfloor \frac{t}{15} \rfloor)$$
-* **Enemy Spawn Phases:**
-  * **0:00 – 0:45 (Early Skirmish):** $100\%$ Scout Rammer. The player gets used to movement controls and wall ricochets.
-  * **0:45 – 1:30 (Artillery Barrage):** $70\%$ Scout Rammer, $30\%$ Light Artillery. The player is forced to take cover behind barricades and use ricochet shots.
-  * **1:30+ (Total War):** $50\%$ Scout Rammer, $35\%$ Light Artillery, $15\%$ Heavy Dreadnought.
+### 5.3. Environmental Obstacles
+* **Steel Bunker (`"bouncy_surface"`):** Indestructible angled steel blocks (`#36393F`) that reflect player bullets once.
+* **Sandbag Barricade (`"destructible_cover"`):** `3 HP` cover; absorbs player and enemy bullets without bouncing and breaks on the 3rd hit.
+* **Mud Crater (`"TerrainHazard"`):** Dark mud craters (`#2E241E`, `z_index = -1`); slows tanks by `35%` (`speed_multiplier = 0.65`), bullets unaffected.
 
 ---
 
-## 7. Art Style & Visual Feedback (Zero-Animation Strategy)
+## 6. Pacing, Escalation & Threat Progression
+
+* **Skirmish Threat Progress:** Destroying enemies adds threat points (Scout `+10`, Artillery `+15`, Dreadnought `+25`) up to `100` to trigger the **Boss** encounter.
+* **Wave Spawn Interval:** Preserves the time-based escalation formula with sector scaling:
+  $$T_{\text{spawn}} = \max\left(0.65, 3.0 - 0.15 \times \lfloor \frac{t}{15} \rfloor - 0.1 \times (\text{sector} - 1)\right)$$
+* **Enemy Spawn Phases (Within Skirmish):**
+  * **0:00 – 0:45:** `100%` Scout Rammer.
+  * **0:45 – 1:30:** `70%` Scout Rammer, `30%` Light Artillery.
+  * **1:30+:** `50%` Scout Rammer, `35%` Light Artillery, `15%` Heavy Dreadnought.
+* **Phase Transitions:**
+  * **Skirmish → Boss:** Triggered at `100%` Threat Progress.
+  * **Boss → Invasion:** Triggered upon Boss defeat; map expands to `2560x1440` and `3` Capture Zones activate until all `3` are captured.
+
+---
+
+## 7. Art Style, Visual Feedback & Navigation UI
 
 ### 7.1. Color Palette (Stylized War Tones)
-To maintain visual readability, object colors must be clearly differentiated:
 * **Ground / Mud Environment:** Earthy Brown (`#4A3B32`) & Dark Mud (`#2E241E`).
 * **Player Tank:** Olive Drab Green (`#556B2F`) with bright white star accents.
-* **Enemy Units:** Rust Red (`#8B3A3A`) and Charcoal Grey (`#36393F`).
-* **Projectiles:** Bright Brass Yellow (`#FFD700`) for normal bullets, Fiery Orange (`#FF5500`) for bullets after ricocheting, and Crimson Red (`#FF2222`) for enemy bullets.
+* **Enemy Units & Boss:** Rust Red (`#8B3A3A`) and Charcoal Grey (`#36393F`) with high-contrast silhouettes.
+* **Projectiles:** Brass Yellow (`#FFD700`) normal bullets, Fiery Orange (`#FF5500`) ricochet bullets, Crimson Red (`#FF2222`) enemy bullets.
+* **Capture Zones:** Tactical Amber (`#D9A738`) when neutral/capturing, Alert Red (`#FF4444`) when contested, Military Olive (`#6B8E23`) when captured.
 
 ### 7.2. Procedural Juice & VFX (No Character Animation)
-* **Track Marks:** Double dark-brown lines appear on the ground following the tank tracks and fade out after $3\text{ seconds}$.
-* **Muzzle Blast & Recoil:** When firing, a fire flash appears at the cannon muzzle for $0.08\text{ seconds}$, followed by a burst of thin gray smoke particles. Meanwhile, the cannon visual moves backward slightly and smoothly returns to its original position.
-* **Ricochet Sparks:** When a bullet bounces off a steel wall, bright yellow line-shaped sparks appear and travel toward the reflection direction.
-* **Destruction & Debris:** When a tank is destroyed, its visual disappears immediately and is replaced by:
-  1. An explosion of orange fireball particles and thick black smoke.
-  2. $3\text{ to }5$ small armor-plate fragments that are launched, spin, and settle on the ground as wreckage for several seconds.
-  3. A black scorch mark on the ground where the tank exploded.
-* **Hit Flash:** When an enemy or the player takes damage but is not destroyed, its entire sprite turns bright white (`#FFFFFF`) for $0.1\text{ seconds}$.
-* **Screen Shake Matrix:**
-  * Firing: Light shake ($2\text{ pixels}$, duration $0.1\text{ seconds}$).
-  * Enemy Explosion: Medium shake ($5\text{ pixels}$, duration $0.2\text{ seconds}$).
-  * Player Damaged: Heavy shake ($12\text{ pixels}$, duration $0.35\text{ seconds}$), plus Hit-Stop (the game freezes for $0.05\text{ seconds}$ to emphasize the impact).
+* **Track Marks:** Double dark-brown lines (`#2E241E`) fading out over `3s`.
+* **Muzzle Blast & Recoil:** `0.08s` muzzle flash, gray smoke burst, backward barrel tween, and hull recoil impulse.
+* **Ricochet Sparks & Destruction:** `#FFD700` directional sparks on bounce; `#FF5500` fireballs, thick black smoke, $3\text{–}5$ debris fragments, and ground scorch marks on tank destruction.
+* **Hit Flash & Screen Shake:** `0.1s` bright white hit flash; Firing (`2 px`, `0.1s`), Enemy Explosion (`5 px`, `0.2s`), Player Damaged (`12 px`, `0.35s` + `0.05s` hit-stop).
 
----
-
-## 8. Audio Direction (SFX & Music)
-
-Since the visuals are static, sound design plays a major role in conveying mechanical weight:
-
-### 8.1. Sound Effects (SFX) List
-* **Cannon Fire:** A sharp, heavy cannon blast followed by the mechanical sound of a falling shell casing (*clink*).
-* **Bullet Ricochet:** A distinctive bullet-on-metal sound (*"Piiiing!"* or *"Whizz!"*) with a high pitch. Randomize the pitch between $0.9\text{ and }1.1$ to avoid repetition.
-* **Armor Hit / Tank Explosion:** A heavy metallic impact followed by a deep, bass-heavy explosion.
-* **Tank Engine Loop:** A low diesel engine rumble while idle; its pitch increases when the player moves.
-
-### 8.2. Background Music (BGM)
-* Military Percussion / Industrial War Drums-style background music (primarily military snare drums and low brass instruments), at approximately $120\text{–}130\text{ BPM}$ to build adrenaline without interfering with the sound of bullet ricochets.
-
----
-
-## 9. User Interface (UI) & Game Flow
-
-### 9.1. Screen Flow
-* **Title Screen:** Displays the game title over a WW2 tank blueprint background. Includes `DEPLOY (START)` and `QUIT` buttons, plus a brief visual control guide (`WASD` = Move, `Mouse` = Aim/Shoot).
+### 7.3. UI, Navigation & Screen Flow
+* **Title Screen:** Blueprint grid background, `DEPLOY (START)` & `QUIT` buttons, control guide (`WASD` = Move, `Mouse` = Aim/Shoot).
 * **In-Game HUD:**
-  * **Top Left (Armor Integrity):** $3\text{ steel shield plate icons}$. When the player is hit, a shield icon breaks or turns black.
-  * **Top Center (Score & Time):** Military stencil-style score text (`SCORE: 004500`) and survival time (`01:45`).
-  * **Floating Text:** When an enemy is killed by a ricochet bullet, small text such as `+200 RICOCHET!` floats upward and fades at the enemy's destruction location.
-* **Pause Menu:** Opened with `ESC`. Pauses the entire simulation and displays `RESUME`, `RESTART`, and `MAIN MENU` options.
-* **Game Over Screen (MIA / Destroyed):** The screen dims with a sepia-brown tint and displays:
-  * Header: `TANK DESTROYED`
-  * Statistics: `Final Score`, `Time Survived`, and `Ricochet Kills`.
-  * Buttons: `REDEPLOY (SPACE / CLICK)` and `MAIN MENU`.
+  * **Top-Left:** Armor Integrity shield icons (`current_hp` / `MAX_HP`).
+  * **Top-Center:** `SCORE: %06d`, survival timer `MM:SS`, and **Dynamic Objective Tracker** (`THREAT %` during Skirmish → `BOSS HP` bar during Boss → `ZONES CAPTURED: X/3` during Invasion).
+  * **Off-Screen Zone Pointers & Minimap:** Edge-of-screen directional arrows pointing toward active uncaptured Capture Zones (or Boss when off-screen), paired with a compact corner minimap showing arena bounds, player, active zones, and boss/hostiles.
+* **Pause Menu (`ESC`):** Pauses simulation with `RESUME`, `RESTART`, and `MAIN MENU`.
+* **Game Over Screen:** Sepia-tinted overlay showing `TANK DESTROYED`, `Final Score`, `Time Survived`, `Ricochet Kills`, and `REDEPLOY` / `MAIN MENU` buttons.

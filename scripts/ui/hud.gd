@@ -5,7 +5,8 @@ const SAFE_MARGIN: float = 24.0
 const POINTER_MARGIN: float = 32.0
 
 # Minimap constants
-const MINIMAP_SIZE: Vector2 = Vector2(168.0, 94.0)
+const MINIMAP_SIZE: Vector2 = Vector2(104.0, 104.0)
+const RADAR_RADIUS: float = 50.0
 const MINIMAP_ENEMY_LIMIT: int = 80
 
 # Dynamic State
@@ -587,18 +588,17 @@ func _draw_direction_arrow(canvas: CanvasItem, viewport_size: Vector2, center: V
 	canvas.draw_string(font, tip - direction * 30.0 + Vector2(-10, 4), text, HORIZONTAL_ALIGNMENT_CENTER, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_PRIMARY)
 
 func _draw_minimap(canvas: CanvasItem, viewport_size: Vector2) -> void:
-	var rect := Rect2(Vector2(viewport_size.x - MINIMAP_SIZE.x - SAFE_MARGIN, SAFE_MARGIN + 70.0), MINIMAP_SIZE)
+	var radar_center: Vector2 = Vector2(viewport_size.x - SAFE_MARGIN - RADAR_RADIUS, SAFE_MARGIN + 70.0 + RADAR_RADIUS)
+	var rect := Rect2(radar_center - Vector2(RADAR_RADIUS, RADAR_RADIUS), MINIMAP_SIZE)
 
-	canvas.draw_rect(rect, UIThemeBuilder.UI_BG_DARK)
-	canvas.draw_rect(rect, UIThemeBuilder.UI_BORDER_STEEL, false, 2.0)
+	canvas.draw_circle(radar_center, RADAR_RADIUS, UIThemeBuilder.UI_BG_DARK)
+	canvas.draw_arc(radar_center, RADAR_RADIUS, 0.0, TAU, 48, UIThemeBuilder.UI_BORDER_STEEL, 2.0)
+	canvas.draw_arc(radar_center, RADAR_RADIUS * 0.5, 0.0, TAU, 32, Color(1, 1, 1, 0.12), 1.0)
+	canvas.draw_line(radar_center - Vector2(RADAR_RADIUS, 0), radar_center + Vector2(RADAR_RADIUS, 0), Color(1, 1, 1, 0.12), 1.0)
+	canvas.draw_line(radar_center - Vector2(0, RADAR_RADIUS), radar_center + Vector2(0, RADAR_RADIUS), Color(1, 1, 1, 0.12), 1.0)
 
-	canvas.draw_line(Vector2(rect.position.x + rect.size.x * 0.5, rect.position.y), Vector2(rect.position.x + rect.size.x * 0.5, rect.end.y), Color(1, 1, 1, 0.12), 1.0)
-	canvas.draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y * 0.5), Vector2(rect.end.x, rect.position.y + rect.size.y * 0.5), Color(1, 1, 1, 0.12), 1.0)
-	canvas.draw_string(UIThemeBuilder.build_system_font(), rect.position + Vector2(4, 12), "A1", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
-	canvas.draw_string(UIThemeBuilder.build_system_font(), rect.position + Vector2(rect.size.x - 18, rect.size.y - 4), "B2", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
-
-	var sweep_end: Vector2 = rect.get_center() + Vector2.RIGHT.rotated(_radar_angle) * (rect.size.length() * 0.5)
-	canvas.draw_line(rect.get_center(), sweep_end, Color(0.369, 0.580, 0.231, 0.35), 2.0)
+	var sweep_end: Vector2 = radar_center + Vector2.RIGHT.rotated(_radar_angle) * RADAR_RADIUS
+	canvas.draw_line(radar_center, sweep_end, Color(0.369, 0.580, 0.231, 0.55), 2.0)
 
 	var inner := rect.grow(-4.0)
 

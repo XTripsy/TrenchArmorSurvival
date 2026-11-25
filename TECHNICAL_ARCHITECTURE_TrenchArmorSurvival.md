@@ -3,10 +3,10 @@
 ## 1. Engine Standards & Project Configuration
 
 ### 1.1. Core Specifications
-* **Engine Target:** Godot Engine 4.2+ (fully compatible with Godot 4.x).
-* **Scripting Language:** GDScript 2.0 with **Strict Static Typing** required on every line of code (e.g. `var move_speed: float = 220.0`, `func apply_damage(amount: int, is_ricochet: bool) -> void:`).
+* **Engine Target:** Godot Engine 4.2+ (tested on `4.7.2.stable`).
+* **Scripting Language:** GDScript 2.0 with **Strict Static Typing** required on every variable, parameter, and return type (e.g. `var move_speed: float = 220.0`, `func apply_damage(amount: int, is_ricochet: bool) -> void:`).
 * **Rendering Method:** `Forward+` or `Compatibility` (2D Orthographic).
-* **Zero-Asset Dependency (Procedural Fallback):** All primary visual objects must be built using `Polygon2D`, `Line2D`, and `CPUParticles2D`, with Hex color codes matching the GDD. The game must be fully playable through code before any external image assets are added.
+* **Zero-Asset Dependency (Procedural Fallback):** All primary visual objects must be built using `Polygon2D`, `Line2D`, `_draw()`, and `CPUParticles2D`, with Hex color codes matching the GDD. The game must be fully playable through code before any external image assets are added.
 
 ### 1.2. Project Settings (`project.godot`)
 * **Viewport Dimensions:** Width $= 1280\text{ px}$, Height $= 720\text{ px}$.
@@ -31,12 +31,12 @@ res://
 ├── project.godot
 ├── autoloads/
 │   ├── event_bus.gd          # Global Signal Hub (Decoupled Communication)
-│   ├── game_manager.gd       # State Machine, Score, Timer, & Hit-Stop Logic
+│   ├── game_manager.gd       # State Machine, Phase Progression, Score, Timer, & Hit-Stop
 │   ├── vfx_manager.gd        # Particle, Debris, Scorch Mark, & Floating Text Spawner
 │   └── audio_manager.gd      # Procedural/Polyphonic SFX & BGM Controller
 ├── scenes/
 │   ├── main_menu.tscn        # Title Screen & Blueprint UI
-│   ├── arena.tscn            # Main Gameplay Level (Fixed Camera 1280x720)
+│   ├── arena.tscn            # Main Gameplay Level (Inner 1280x720 + Expanded 2560x1440)
 │   ├── player/
 │   │   ├── player.tscn       # Player Tank
 │   │   └── tread_mark.tscn   # Tank Track Marks (Line2D)
@@ -46,11 +46,14 @@ res://
 │   ├── enemies/
 │   │   ├── enemy_scout.tscn
 │   │   ├── enemy_artillery.tscn
-│   │   └── enemy_dreadnought.tscn
+│   │   ├── enemy_dreadnought.tscn
+│   │   ├── enemy_pillbox.tscn
+│   │   └── boss_goliath.tscn
 │   ├── environment/
 │   │   ├── steel_bunker.tscn
 │   │   ├── sandbag_barricade.tscn
-│   │   └── mud_crater.tscn
+│   │   ├── mud_crater.tscn
+│   │   └── capture_zone.tscn
 │   └── ui/
 │       ├── hud.tscn
 │       ├── pause_menu.tscn
@@ -67,13 +70,16 @@ res://
     │   ├── player_bullet.gd
     │   └── enemy_bullet.gd
     ├── enemies/
-    │   ├── base_enemy.gd     # Parent class for all enemies
+    │   ├── base_enemy.gd     # Parent class for all enemies & boss
     │   ├── enemy_scout.gd
     │   ├── enemy_artillery.gd
-    │   └── enemy_dreadnought.gd
+    │   ├── enemy_dreadnought.gd
+    │   ├── enemy_pillbox.gd
+    │   └── boss_goliath.gd
     ├── environment/
     │   ├── sandbag_barricade.gd
-    │   └── mud_crater.gd
+    │   ├── mud_crater.gd
+    │   └── capture_zone.gd
     └── ui/
         ├── main_menu.gd
         ├── hud.gd
@@ -86,23 +92,26 @@ res://
 
 ## 3. Physics & Collision Matrix
 
-The collision detection system uses 6 Physics Layers and Node Groups to distinguish bouncing surfaces from non-bouncing surfaces.
+The collision detection system uses 6 Physics Layers and Node Groups to distinguish bouncing surfaces, destructible covers, and ground zones.
 
 ### 3.1. Collision Layers Table
 
 | Bit / Layer | Layer Name | Objects on This Layer | Collision Mask (Detects Layers) |
 | :--- | :--- | :--- | :--- |
 | **Layer 1** | `Player` | `Player` (`CharacterBody2D`) | $2, 3, 5, 6$ |
-| **Layer 2** | `Enemy` | `EnemyScout`, `EnemyArtillery`, `EnemyDreadnought` | $1, 2, 3, 4, 6$ |
-| **Layer 3** | `Environment` | Perimeter Walls, `SteelBunker`, `SandbagBarricade` | No mask required (Static) |
+| **Layer 2** | `Enemy` | `EnemyScout`, `EnemyArtillery`, `EnemyDreadnought`, `EnemyPillbox`, `BossGoliath` | $1, 2, 3, 4, 6$ |
+| **Layer 3** | `Environment` | Perimeter Walls, Expansion Barriers, `SteelBunker`, `SandbagBarricade` | No mask required (Static) |
 | **Layer 4** | `PlayerBullet` | `PlayerBullet` (`CharacterBody2D`) | $2, 3$ *(Ignore Layer 1 = No Self-Damage)* |
-| **Layer 5** | `EnemyBullet` | `EnemyBullet` (`Area2D` / `CharacterBody2D`) | $1, 3$ |
-| **Layer 6** | `TerrainHazard` | `MudCrater` (`Area2D`) | $1, 2$ |
+| **Layer 5** | `EnemyBullet` | `EnemyBullet` (`CharacterBody2D`) | $1, 3$ |
+| **Layer 6** | `TerrainHazard` | `MudCrater` (`Area2D`), `CaptureZone` (`Area2D`) | $1, 2$ |
 
 ### 3.2. Node Groups (Surface & Entity Tagging)
-* `"player"`: Assigned to the `Player` root node so enemy AI can quickly find its target using `get_tree().get_first_node_in_group("player")`.
-* `"bouncy_surface"`: Assigned to Perimeter Walls and `SteelBunker`. Player bullets only bounce when the collided object belongs to this group.
-* `"destructible_cover"`: Assigned to `SandbagBarricade`. It absorbs bullets without bouncing them and loses HP when hit.
+* `"player"`: Assigned to the `Player` root node so enemy AI and capture zones can quickly find the player via `get_tree().get_first_node_in_group("player")`.
+* `"enemy"`: Assigned to all enemy units and boss nodes so `CaptureZone` can detect contested status cleanly.
+* `"boss"`: Assigned to `BossGoliath` root node for HUD/minimap tracking.
+* `"bouncy_surface"`: Assigned to Perimeter Walls, Expansion Barriers, and `SteelBunker`. Player bullets only bounce when the collided object belongs to this group.
+* `"destructible_cover"`: Assigned to `SandbagBarricade`. Absorbs bullets without bouncing and loses HP when hit.
+* `"capture_zone"`: Assigned to `CaptureZone` root nodes for HUD off-screen indicators and minimap rendering.
 
 ---
 
@@ -120,124 +129,112 @@ signal score_updated(new_score: int, ricochet_kills: int)
 signal camera_shake_requested(intensity: float, duration: float)
 signal bullet_ricocheted(impact_position: Vector2, impact_normal: Vector2)
 signal game_state_changed(new_state: int)
+signal phase_changed(new_phase: int)
+signal threat_updated(current_threat: float, max_threat: float)
+signal boss_spawned(boss_name: String, current_hp: int, max_hp: int)
+signal boss_hp_changed(current_hp: int, max_hp: int)
+signal boss_defeated(boss_position: Vector2, base_score: int)
+signal map_expanded(new_bounds: Rect2)
+signal capture_zone_updated(zone_id: int, progress: float, state_name: String)
+signal capture_zone_captured(zone_id: int, captured_count: int, total_count: int)
+signal sector_cleared(sector_num: int, bonus_score: int)
 ```
 
-### 4.2. `GameManager.gd` (State & Time Controller)
-* **Game States Enum:** `enum State { MENU, PLAYING, PAUSED, GAME_OVER }`
+### 4.2. `GameManager.gd` (State, Progression & Time Controller)
+* **Enums:**
+  * `enum State { MENU, PLAYING, PAUSED, GAME_OVER }`
+  * `enum Phase { SKIRMISH, BOSS, INVASION }`
 * **Tracked Metrics:**
   * `score: int = 0`
   * `time_survived: float = 0.0`
   * `ricochet_kills: int = 0`
-* **Score Calculation Logic:**
-  When receiving the `enemy_destroyed(pos, base_score, was_ricochet)` signal:
+  * `current_phase: Phase = Phase.SKIRMISH`
+  * `sector_index: int = 1`
+  * `threat_progress: float = 0.0` (`0.0` to `100.0`)
+  * `zones_captured: int = 0`
+  * `zones_total: int = 3`
+* **Score & Threat Progression Logic:**
+  When receiving `enemy_destroyed(pos, base_score, was_ricochet)`:
   * If `was_ricochet == true`, award $\text{base\_score} \times 2$ points, increment `ricochet_kills += 1`, and call `VFXManager.spawn_floating_text(pos, "+%d RICOCHET!" % (base_score * 2))`.
-  * If `false`, award the normal $\text{base\_score}$ value.
+  * If `false`, award normal $\text{base\_score}$.
+  * During `Phase.SKIRMISH`, increment `threat_progress` based on enemy value (e.g., `10.0` for `100` score, `15.0` for `200`, `25.0` for `500`), clamp to `100.0`, emit `threat_updated`, and transition to `Phase.BOSS` when `threat_progress >= 100.0`.
 * **Hit-Stop / Freeze-Frame System:**
-  Implement `trigger_hit_stop(duration: float = 0.05) -> void:` to set `Engine.time_scale = 0.05`, then restore it to $1.0$ using `get_tree().create_timer(duration, true, false, true).timeout`.
+  `trigger_hit_stop(duration: float = 0.05) -> void:` sets `Engine.time_scale = 0.05` and restores it to `1.0` via `get_tree().create_timer(duration, true, false, true).timeout` with a sequence guard.
 
 ### 4.3. `VFXManager.gd` (Procedural Juice Generator)
-Responsible for creating visual effects in the arena without adding effect logic to entity scripts:
-* `spawn_muzzle_flash(pos: Vector2, rot: float) -> void`: Creates a yellow-white polygon flash for $0.08\text{ s}$ and a puff of gray smoke particles.
-* `spawn_ricochet_sparks(pos: Vector2, normal: Vector2) -> void`: Emits yellow (`#FFD700`) line-shaped `CPUParticles2D` in the reflection direction.
-* `spawn_tank_explosion(pos: Vector2) -> void`:
-  1. Places a transparent black polygon scorch mark on the lower ground layer.
-  2. Emits orange (`#FF5500`) fireball particles and black smoke.
-  3. Creates $3\text{ to }5$ rigid/tweened debris fragments (armor plates) that are launched in random directions and stop after $0.4\text{ s}$.
-* `spawn_floating_text(pos: Vector2, text: String) -> void`: Instantiates `floating_text.tscn`, which moves upward by $30\text{ px}$ and fades out (`modulate.a = 0`) over $0.8\text{ s}$ using a `Tween`.
+* `spawn_muzzle_flash(pos: Vector2, rot: float) -> void`
+* `spawn_ricochet_sparks(pos: Vector2, normal: Vector2) -> void`
+* `spawn_tank_explosion(pos: Vector2) -> void`
+* `spawn_floating_text(pos: Vector2, text: String) -> void`
+* Auto-subscribes to `bullet_ricocheted` and `enemy_destroyed`.
 
 ### 4.4. `AudioManager.gd` (Procedural / Pool Audio)
-Manages a pool of `AudioStreamPlayer` and `AudioStreamPlayer2D` nodes. If `.wav/.ogg` audio files are not yet available in the `assets/` folder, `AudioManager` must use `AudioStreamGenerator` (simple procedural waveform synthesis: white-noise bursts for explosions/cannon fire, high-pitched sine-wave sweeps for ricochet pings) so the game does not produce errors and still provides audio feedback.
+Manages an 8-voice pool of `AudioStreamPlayer` nodes using `AudioStreamGenerator` procedural synthesis (`play_cannon()`, `play_enemy_cannon()`, `play_ricochet()`, `play_explosion()`, `play_hit()`, `play_engine(moving: bool)`, `stop_engine()`, `start_bgm()`, `stop_bgm()`).
 
 ---
 
 ## 5. Entity Specifications & Node Hierarchies
 
 ### 5.1. Player Tank (`res://scenes/player/player.tscn`)
-* **Root Node:** `Player` (`CharacterBody2D`) — Group: `"player"`, Layer: $1$, Mask: $2, 3, 5, 6$.
-* **Child Nodes:**
-  * `CollisionShape2D` (`RectangleShape2D`, size $36 \times 36\text{ px}$).
-  * `HullVisual` (`Node2D` containing an Olive Drab `#556B2F` `Polygon2D` and track-line details).
-  * `TurretPivot` (`Node2D` for independent rotation toward the cursor).
-    * `TurretVisual` (`Polygon2D` for the cannon assembly and white star). Moves backward/forward using a `Tween` during recoil.
-    * `MuzzleMarker` (`Marker2D` at the barrel tip, used as the bullet spawn point).
-  * `TreadTimer` (`Timer` with a $0.05\text{ s}$ interval for placing track-mark points).
-* **Key Variables & Logic (`player.gd`):**
+* **Root Node:** `PlayerTank` (`CharacterBody2D`) — Group: `"player"`, Layer: $1$, Mask: $2, 3, 5, 6$, `MOTION_MODE_FLOATING`.
+* **Key Variables & Methods (`player.gd`):**
   * `const MAX_HP: int = 3`, `const BASE_SPEED: float = 220.0`, `const TURN_SPEED: float = 10.0`, `const FIRE_COOLDOWN: float = 0.45`, `const RECOIL_FORCE: float = 40.0`, `const IFRAME_DURATION: float = 1.2`.
-  * `var speed_multiplier: float = 1.0` (changed to $0.65$ by `MudCrater`).
-  * **Movement & Hull Rotation:** Read the `Input.get_vector()` vector. While moving, interpolate the angle using `HullVisual.rotation = lerp_angle(HullVisual.rotation, velocity.angle(), TURN_SPEED * delta)`.
-  * **Turret Aim:** `TurretPivot.look_at(get_global_mouse_position())`.
-  * **Shooting & Recoil:** When firing, apply `velocity -= aim_direction * RECOIL_FORCE * 5.0`, run a backward recoil `Tween` on `TurretVisual.position.x`, and emit `EventBus.camera_shake_requested.emit(2.0, 0.1)`.
-  * **Damage & I-Frames:** When damaged, reduce HP, set `is_invulnerable = true` for $1.2\text{ s}$ (make the visual blink using a `Tween` on `modulate.a`), call `GameManager.trigger_hit_stop(0.05)`, and emit `EventBus.camera_shake_requested.emit(12.0, 0.35)`.
+  * `var hp: int = MAX_HP`
+  * `var speed_multiplier: float = 1.0`
+  * `func heal(amount: int) -> void`: Restores `hp = mini(MAX_HP, hp + amount)` and emits `EventBus.player_damaged.emit(hp, MAX_HP)` so HUD shield icons update immediately.
 
 ### 5.2. Player Bullet (`res://scenes/projectiles/player_bullet.tscn`)
-* **Root Node:** `PlayerBullet` (`CharacterBody2D`) — Layer: $4$, Mask: $2, 3$.
-* **Key Variables (`player_bullet.gd`):**
-  * `const SPEED: float = 650.0`
-  * `const MAX_BOUNCES: int = 1`
-  * `var bounce_count: int = 0`
-  * `var is_ricochet: bool = false`
-* **Physics Step (`_physics_process`):**
-  ```gdscript
-  var collision: KinematicCollision2D = move_and_collide(velocity * delta)
-  if collision:
-      var collider: Object = collision.get_collider()
-      if collider.has_method("take_damage"):
-          collider.take_damage(1, is_ricochet)
-          queue_free()
-      elif collider.is_in_group("bouncy_surface"):
-          if bounce_count < MAX_BOUNCES:
-              bounce_count += 1
-              is_ricochet = true
-              velocity = velocity.bounce(collision.get_normal())
-              rotation = velocity.angle()
-              _apply_ricochet_visuals() # Change color to #FF5500
-              EventBus.bullet_ricocheted.emit(collision.get_position(), collision.get_normal())
-          else:
-              VFXManager.spawn_ricochet_sparks(collision.get_position(), collision.get_normal())
-              queue_free()
-      else:
-          queue_free()
-  ```
+* **Root Node:** `PlayerBullet` (`CharacterBody2D`) — Layer: $4$, Mask: $2, 3$, `SPEED = 650.0`, `MAX_BOUNCES = 1`.
+* Calls `collider.call("take_damage", 1, is_ricochet)` on damageable targets; bounces once on `"bouncy_surface"`, turns `#FF5500`, and emits `EventBus.bullet_ricocheted`.
 
-### 5.3. Enemy Architecture (`BaseEnemy` & Subclasses)
-All enemies inherit from `scripts/enemies/base_enemy.gd` (`CharacterBody2D`, Layer: $2$, Mask: $1, 2, 3, 4, 6$).
-* **`BaseEnemy` Properties:**
-  * `@export var max_hp: int = 1`
-  * `@export var move_speed: float = 150.0`
-  * `@export var base_score: int = 100`
-  * `var speed_multiplier: float = 1.0`
-  * Method `take_damage(amount: int, from_ricochet: bool) -> void`: Reduces HP, triggers a white Hit Flash (`modulate = Color(10, 10, 10, 1)` for $0.1\text{ s}$), and calls `die(from_ricochet)` when $\text{HP} \le 0$.
-* **Subclasses:**
-  1. **`enemy_scout.gd` (Scout Rammer):** $\text{HP} = 1$, $\text{Speed} = 250.0$, $\text{Score} = 100$. Directly pursues the player's position. On contact with `Player` (detected through `move_and_slide` slide collisions or an `Area2D` hurtbox), deals $1\text{ damage}$ to the player and calls `die(false)`.
-  2. **`enemy_artillery.gd` (Light Artillery):** $\text{HP} = 1$, $\text{Speed} = 110.0$, $\text{Score} = 200$. Calculates `global_position.distance_to(player.global_position)`. If the distance is $> 350.0\text{ px}$, moves forward; if it is $\le 350.0\text{ px}$, sets `velocity = Vector2.ZERO`. Fires `enemy_bullet.tscn` (speed $400\text{ px/s}$, no ricochet) every $2.5\text{ s}$.
-  3. **`enemy_dreadnought.gd` (Heavy Dreadnought):** $\text{HP} = 2$, $\text{Speed} = 70.0$, $\text{Score} = 500$, fires every $3.5\text{ s}$ (bullet speed $350\text{ px/s}$). Overrides `take_damage`:
-     ```gdscript
-     func take_damage(amount: int, from_ricochet: bool) -> void:
-         if from_ricochet:
-             super.take_damage(max_hp, true) # Instant kill from a ricochet bullet!
-         else:
-             super.take_damage(amount, false)
-     ```
+### 5.3. Enemy Architecture (`BaseEnemy`, Subclasses & Boss)
+All enemies inherit from `scripts/enemies/base_enemy.gd` (`CharacterBody2D`, Group: `"enemy"`, Layer: $2$, Mask: $1, 2, 3, 4, 6$).
+* **`BaseEnemy` Properties:** `@export var max_hp: int = 1`, `@export var move_speed: float = 150.0`, `@export var base_score: int = 100`, `var speed_multiplier: float = 1.0`.
+* **Standard Subclasses:**
+  1. **`enemy_scout.gd`:** $\text{HP} = 1$, $\text{Speed} = 250.0$, $\text{Score} = 100$. Chases player, deals $1\text{ damage}$ on contact, then calls `die(false)`.
+  2. **`enemy_artillery.gd`:** $\text{HP} = 1$, $\text{Speed} = 110.0$, $\text{Score} = 200$. Stops at $\le 350.0\text{ px}$ and fires `enemy_bullet.tscn` ($400\text{ px/s}$) every $2.5\text{ s}$.
+  3. **`enemy_dreadnought.gd`:** $\text{HP} = 2$, $\text{Speed} = 70.0$, $\text{Score} = 500$, fires every $3.5\text{ s}$ ($350\text{ px/s}$). Instant kill when `from_ricochet == true`.
+  4. **`enemy_pillbox.gd` (Invasion Defender):** $\text{HP} = 3$, $\text{Speed} = 0.0$, $\text{Score} = 300$. Stationary turret guarding Capture Zones in the expanded arena; aims at player and fires `enemy_bullet.tscn` ($400\text{ px/s}$) every $2.2\text{ s}$.
+* **Boss Entity (`boss_goliath.gd`):**
+  * Inherits `BaseEnemy`, added to group `"boss"`, scaled `~2.4x`, `base_score = 1500`.
+  * `max_hp = 16 + 4 * (GameManager.sector_index - 1)`.
+  * Overrides `take_damage(amount: int, from_ricochet: bool) -> void`: deals `2` damage if `from_ricochet == true`, else `1` damage; emits `EventBus.boss_hp_changed.emit(hp, max_hp)`.
+  * Cycles 3 attack states:
+    1. **Spread Volley:** Fires 3 `enemy_bullet.tscn` projectiles in a fan spread (`-18°`, `0°`, `+18°`) toward the player.
+    2. **Mortar Telegraph:** Spawns a temporary ground warning ring (`1.1s` telegraph) at the player's predicted/current spot that detonates for `1` area damage if the player remains inside.
+    3. **Heavy Advance:** Moves toward the player at `move_speed = 65.0` between attacks.
+  * Overrides `die(from_ricochet: bool) -> void`: emits `EventBus.boss_defeated.emit(global_position, base_score)` in addition to explosion VFX/score.
 
-### 5.4. Environmental Obstacles
-1. **`steel_bunker.tscn` (`StaticBody2D`):** Layer $3$, Group `"bouncy_surface"`. An angled metallic-gray steel polygon with rivet details. Indestructible.
-2. **`sandbag_barricade.tscn` (`StaticBody2D`):** Layer $3$, Group `"destructible_cover"`. Has `take_damage(amount: int, _is_ricochet: bool)`. Has $\text{HP} = 3$. Each hit from either player or enemy bullets causes a white flash and slight shrinking/cracking. Destroyed when $\text{HP} \le 0$.
-3. **`mud_crater.tscn` (`Area2D`):** Layer $6$, Mask $1, 2$, `z_index = -1`. Connects `body_entered` and `body_exited` signals. When a tank enters, set `body.speed_multiplier = 0.65`; when it exits, restore `body.speed_multiplier = 1.0`.
+### 5.4. Environmental Obstacles & Capture Zones
+1. **`steel_bunker.tscn` (`StaticBody2D`):** Layer $3$, Group `"bouncy_surface"`, indestructible.
+2. **`sandbag_barricade.tscn` (`StaticBody2D`):** Layer $3$, Group `"destructible_cover"`, $\text{HP} = 3$, does not bounce bullets.
+3. **`mud_crater.tscn` (`Area2D`):** Layer $6$, Mask $1, 2$, `z_index = -1`, sets `speed_multiplier = 0.65` inside.
+4. **`capture_zone.tscn` (`Area2D`):** Layer $6$, Mask $1, 2$, `z_index = -1`, Group `"capture_zone"`, `CircleShape2D` radius `180.0 px`.
+   * Tracks bodies entering/exiting (`"player"` vs `"enemy"`).
+   * States: `NEUTRAL`, `CAPTURING`, `CONTESTED`, `CAPTURED`.
+   * When `"player"` is inside and enemy count inside is `0`, `progress` increases by `0.15 * delta` (`15%/s`). If enemies are inside while `progress < 1.0`, state switches to `CONTESTED` and progress pauses.
+   * At `progress >= 1.0`, locks as `CAPTURED`, heals player `+1 HP`, awards `+500` score + floating text, and emits `EventBus.capture_zone_captured`.
 
 ---
 
-## 6. Arena Layout & Wave Director Algorithm
+## 6. Arena Layout, Map Expansion & Wave Director
 
-### 6.1. Arena Structure (`res://scenes/arena.tscn`)
-* Contains a `Camera2D` at the center $(640, 360)$ with the `camera_shake.gd` script, which listens to the `EventBus.camera_shake_requested` signal.
-* Outer boundary walls (`PerimeterWalls`) are placed along all four screen edges, with $4$ spawn-gate openings ($80\text{ px}$ wide) at the center of the Top, Bottom, Left, and Right sides. Each gate has an off-screen `Marker2D` used as an enemy spawn point.
-* Place $4$ `SteelBunker` units symmetrically at a $45^\circ$ angle in the four arena quadrants (as ricochet mirrors), $3$ `SandbagBarricade` units near the center, and $3$ `MudCrater` units.
+### 6.1. Arena & Expansion Structure (`arena.tscn` & `arena_controller.gd`)
+* **Inner Sector Bounds:** `Rect2(0, 0, 1280, 720)` surrounded by `SteelBunker`, `SandbagBarricade`, `MudCrater`, and destructible/openable **Expansion Barriers** along the outer edges of the initial `1280x720` box.
+* **Expanded Sector Bounds:** `Rect2(-640, -360, 2560, 1440)` enclosed by outer perimeter walls (Layer $3$, `"bouncy_surface"`) with outer spawn gates.
+* **Expansion Transition (`_on_boss_defeated`):**
+  1. Removes/explodes the inner `ExpansionBarriers` so the player can drive freely into the `2560x1440` outer sector.
+  2. Spawns `3` `CaptureZone` nodes at designated outer sector coordinates along with `EnemyPillbox` defenders and initial patrol enemies.
+  3. Emits `EventBus.map_expanded.emit(EXPANDED_BOUNDS)` and transitions `GameManager` to `Phase.INVASION`.
+* **Sector Loop (`_on_capture_zone_captured`):**
+  * When `zones_captured >= zones_total`, emits `EventBus.sector_cleared`, awards `1000` bonus points, increments `sector_index += 1`, clears completed zone nodes, and starts the next sector escalation cycle.
 
-### 6.2. Time-Based Wave Director (`wave_director.gd`)
-Controls the `SpawnTimer` interval and enemy-type probabilities based on survival time $t$ (in seconds):
-* **Spawn Interval Calculation:**
-  $$T_{\text{spawn}} = \max\left(0.8, 3.0 - 0.15 \times \lfloor \frac{t}{15.0} \rfloor\right)$$
-* **Spawn Probability Table (Weighted Random Roll $0.0\text{–}1.0$):**
-  * If $t < 45.0$: $100\%$ `EnemyScout`.
-  * If $45.0 \le t < 90.0$: Roll $< 0.70 \rightarrow$ `EnemyScout`, remaining ($30\%$) $\rightarrow$ `EnemyArtillery`.
-  * If $t \ge 90.0$: Roll $< 0.50 \rightarrow$ `EnemyScout`, Roll $< 0.85$ ($35\%$) $\rightarrow$ `EnemyArtillery`, remaining ($15\%$) $\rightarrow$ `EnemyDreadnought`.
+### 6.2. Dynamic Camera (`camera_shake.gd`)
+* Remains centered at `(640, 360)` with `1280x720` limits during `SKIRMISH` and `BOSS`.
+* Upon receiving `EventBus.map_expanded(new_bounds)`, updates `limit_left`, `limit_right`, `limit_top`, `limit_bottom` to `new_bounds` and smoothly tracks the `Player` position while preserving `camera_shake_requested` offsets.
+
+### 6.3. Phase-Aware Wave Director (`wave_director.gd`)
+* Spawn interval formula:
+  $$T_{\text{spawn}} = \max\left(0.65, 3.0 - 0.15 \times \lfloor \frac{t}{15.0} \rfloor - 0.1 \times (\text{sector} - 1)\right)$$
+* Spawns `BossGoliath` when `GameManager.current_phase` transitions to `Phase.BOSS`.
+* Adjusts spawn cadence during `BOSS` (slower support spawns) and `INVASION` (spawns patrols near active outer gates) so combat pressure remains balanced across all 3 phases.
