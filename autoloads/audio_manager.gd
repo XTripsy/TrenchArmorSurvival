@@ -28,6 +28,8 @@ var _cannon: PackedVector2Array
 var _ricochet: PackedVector2Array
 var _explosion: PackedVector2Array
 var _engine: PackedVector2Array
+var _ui_click: PackedVector2Array
+var _ui_hover: PackedVector2Array
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -44,6 +46,8 @@ func _ready() -> void:
 	_engine = _render_engine(1.0)
 	_hit = _render_hit()
 	_bgm = _render_bgm()
+	_ui_click = _render_ui_click()
+	_ui_hover = _render_ui_hover()
 	EventBus.player_damaged.connect(_on_player_damaged)
 	EventBus.enemy_destroyed.connect(_on_enemy_destroyed)
 
@@ -84,6 +88,14 @@ func play_hit() -> void:
 func play_enemy_cannon() -> void:
 	last_sfx = &"enemy_cannon"
 	_play(_cannon, 0.8, false)
+
+func play_ui_click() -> void:
+	last_sfx = &"ui_click"
+	_play(_ui_click, 1.0, false)
+
+func play_ui_hover() -> void:
+	last_sfx = &"ui_hover"
+	_play(_ui_hover, 1.0, false)
 
 func play_engine(moving: bool) -> void:
 	last_sfx = &"engine"
@@ -297,5 +309,32 @@ func _render_engine(duration: float) -> PackedVector2Array:
 		low += 0.05 * (rng.randf_range(-1.0, 1.0) - low)
 		var value: float = (sin(TAU * 55.0 * t) * 0.25 + sin(TAU * 82.5 * t) * 0.15 + low * 0.4) * fade
 		value = clampf(value, -1.0, 1.0)
+		frames[i] = Vector2(value, value)
+	return frames
+
+func _render_ui_click() -> PackedVector2Array:
+	var count: int = int(MIX_RATE * 0.1)
+	var frames: PackedVector2Array = PackedVector2Array()
+	frames.resize(count + int(MIX_RATE * ONE_SHOT_TAIL))
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 31337
+	for i: int in count:
+		var t: float = float(i) / MIX_RATE
+		var envelope: float = exp(-t / 0.015)
+		var noise: float = rng.randf_range(-1.0, 1.0) * 0.2
+		var tone: float = sin(TAU * 1200.0 * t) * 0.3
+		var value: float = clampf((noise + tone) * envelope, -1.0, 1.0)
+		frames[i] = Vector2(value, value)
+	return frames
+
+func _render_ui_hover() -> PackedVector2Array:
+	var count: int = int(MIX_RATE * 0.05)
+	var frames: PackedVector2Array = PackedVector2Array()
+	frames.resize(count + int(MIX_RATE * ONE_SHOT_TAIL))
+	for i: int in count:
+		var t: float = float(i) / MIX_RATE
+		var envelope: float = exp(-t / 0.01)
+		var tone: float = sin(TAU * 2200.0 * t) * 0.1
+		var value: float = clampf(tone * envelope, -1.0, 1.0)
 		frames[i] = Vector2(value, value)
 	return frames
