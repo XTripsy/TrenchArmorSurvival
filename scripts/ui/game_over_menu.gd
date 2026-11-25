@@ -1,10 +1,10 @@
 extends CanvasLayer
 
 const BEST_SCORE_SETTING: String = "application/config/best_score"
-const REPORT_CONTENT_TOP: float = 120.0
+const REPORT_CONTENT_TOP: float = 130.0
 const REPORT_CONTENT_WIDTH: float = 460.0
 const REPORT_CONTENT_HEIGHT: float = 300.0
-const RECORD_BADGE_TOP: float = 272.0
+const RECORD_BADGE_TOP: float = 230.0
 const RECORD_BADGE_HEIGHT: float = 28.0
 var _is_redeploying: bool = false
 var _report_card: Panel
@@ -97,6 +97,7 @@ func _show_debrief() -> void:
 	if is_record:
 		ProjectSettings.set_setting(BEST_SCORE_SETTING, GameManager.score)
 	header_label.text = "ARMOR DESTROYED"
+	header_label.position = Vector2(0, 65)
 	stats_label.text = "FINAL SCORE: %06d\nSECTOR REACHED: %02d\nOUTPOSTS CAPTURED: %d/%d\nRICOCHET KILLS: %d\nTIME SURVIVED: %02d:%02d" % [
 		GameManager.score,
 		GameManager.sector_index,
