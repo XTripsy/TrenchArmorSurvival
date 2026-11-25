@@ -17,125 +17,254 @@ size = Vector2(600, 20)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_vertical"]
 size = Vector2(20, 320)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_outer_horizontal"]
+size = Vector2(2560, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_outer_vertical"]
+size = Vector2(20, 1440)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_horizontal_seal"]
+size = Vector2(80, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vertical_seal"]
+size = Vector2(20, 80)
+
 [node name="Arena" type="Node2D" unique_id=1035745224]
 script = ExtResource("1_arena")
+
+[node name="OuterBackground" type="Polygon2D" parent="." unique_id=1648761916]
+z_index = -101
+color = Color(0.254902, 0.203922, 0.172549, 1)
+polygon = PackedVector2Array(-640, -360, 1920, -360, 1920, 1080, -640, 1080)
 
 [node name="Background" type="Polygon2D" parent="." unique_id=1648761915]
 z_index = -100
 color = Color(0.290196, 0.231373, 0.196078, 1)
 polygon = PackedVector2Array(0, 0, 1280, 0, 1280, 720, 0, 720)
 
-[node name="PerimeterWalls" type="Node2D" parent="." unique_id=1002644042]
+[node name="ExpansionBarriers" type="Node2D" parent="." unique_id=1002644042]
 
-[node name="WallTopLeft" type="StaticBody2D" parent="PerimeterWalls" unique_id=468753143 groups=["bouncy_surface"]]
+[node name="WallTopLeft" type="StaticBody2D" parent="ExpansionBarriers" unique_id=468753143 groups=["bouncy_surface"]]
 position = Vector2(300, 10)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallTopLeft" unique_id=1049218849]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallTopLeft" unique_id=1049218849]
 shape = SubResource("RectangleShape2D_horizontal")
 
-[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallTopLeft" unique_id=2063828679]
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallTopLeft" unique_id=2063828679]
 color = Color(0.168627, 0.137255, 0.12549, 1)
 polygon = PackedVector2Array(-300, -10, 300, -10, 300, 10, -300, 10)
 
-[node name="WallTopRight" type="StaticBody2D" parent="PerimeterWalls" unique_id=716080899 groups=["bouncy_surface"]]
+[node name="WallTopRight" type="StaticBody2D" parent="ExpansionBarriers" unique_id=716080899 groups=["bouncy_surface"]]
 position = Vector2(980, 10)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallTopRight" unique_id=1933866556]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallTopRight" unique_id=1933866556]
 shape = SubResource("RectangleShape2D_horizontal")
 
-[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallTopRight" unique_id=327438313]
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallTopRight" unique_id=327438313]
 color = Color(0.168627, 0.137255, 0.12549, 1)
 polygon = PackedVector2Array(-300, -10, 300, -10, 300, 10, -300, 10)
 
-[node name="WallBottomLeft" type="StaticBody2D" parent="PerimeterWalls" unique_id=173104473 groups=["bouncy_surface"]]
+[node name="WallBottomLeft" type="StaticBody2D" parent="ExpansionBarriers" unique_id=173104473 groups=["bouncy_surface"]]
 position = Vector2(300, 710)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallBottomLeft" unique_id=1870406632]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallBottomLeft" unique_id=1870406632]
 shape = SubResource("RectangleShape2D_horizontal")
 
-[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallBottomLeft" unique_id=1494685571]
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallBottomLeft" unique_id=1494685571]
 color = Color(0.168627, 0.137255, 0.12549, 1)
 polygon = PackedVector2Array(-300, -10, 300, -10, 300, 10, -300, 10)
 
-[node name="WallBottomRight" type="StaticBody2D" parent="PerimeterWalls" unique_id=1424676445 groups=["bouncy_surface"]]
+[node name="WallBottomRight" type="StaticBody2D" parent="ExpansionBarriers" unique_id=1424676445 groups=["bouncy_surface"]]
 position = Vector2(980, 710)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallBottomRight" unique_id=68748221]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallBottomRight" unique_id=68748221]
 shape = SubResource("RectangleShape2D_horizontal")
 
-[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallBottomRight" unique_id=954559006]
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallBottomRight" unique_id=954559006]
 color = Color(0.168627, 0.137255, 0.12549, 1)
 polygon = PackedVector2Array(-300, -10, 300, -10, 300, 10, -300, 10)
 
-[node name="WallLeftTop" type="StaticBody2D" parent="PerimeterWalls" unique_id=1001093736 groups=["bouncy_surface"]]
+[node name="WallLeftTop" type="StaticBody2D" parent="ExpansionBarriers" unique_id=1001093736 groups=["bouncy_surface"]]
 position = Vector2(10, 160)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallLeftTop" unique_id=1268458895]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallLeftTop" unique_id=1268458895]
 shape = SubResource("RectangleShape2D_vertical")
 
-[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallLeftTop" unique_id=1587369026]
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallLeftTop" unique_id=1587369026]
 color = Color(0.168627, 0.137255, 0.12549, 1)
 polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
 
-[node name="WallLeftBottom" type="StaticBody2D" parent="PerimeterWalls" unique_id=1054009254 groups=["bouncy_surface"]]
+[node name="WallLeftBottom" type="StaticBody2D" parent="ExpansionBarriers" unique_id=1054009254 groups=["bouncy_surface"]]
 position = Vector2(10, 560)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallLeftBottom" unique_id=213197020]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallLeftBottom" unique_id=213197020]
 shape = SubResource("RectangleShape2D_vertical")
 
-[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallLeftBottom" unique_id=1535951935]
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallLeftBottom" unique_id=1535951935]
 color = Color(0.168627, 0.137255, 0.12549, 1)
 polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
 
-[node name="WallRightTop" type="StaticBody2D" parent="PerimeterWalls" unique_id=370281362 groups=["bouncy_surface"]]
+[node name="WallRightTop" type="StaticBody2D" parent="ExpansionBarriers" unique_id=370281362 groups=["bouncy_surface"]]
 position = Vector2(1270, 160)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallRightTop" unique_id=673272237]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallRightTop" unique_id=673272237]
 shape = SubResource("RectangleShape2D_vertical")
 
-[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallRightTop" unique_id=1877716377]
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallRightTop" unique_id=1877716377]
 color = Color(0.168627, 0.137255, 0.12549, 1)
 polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
 
-[node name="WallRightBottom" type="StaticBody2D" parent="PerimeterWalls" unique_id=103077544 groups=["bouncy_surface"]]
+[node name="WallRightBottom" type="StaticBody2D" parent="ExpansionBarriers" unique_id=103077544 groups=["bouncy_surface"]]
 position = Vector2(1270, 560)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="PerimeterWalls/WallRightBottom" unique_id=275298380]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallRightBottom" unique_id=275298380]
 shape = SubResource("RectangleShape2D_vertical")
 
-[node name="Visual" type="Polygon2D" parent="PerimeterWalls/WallRightBottom" unique_id=1068207827]
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallRightBottom" unique_id=1068207827]
 color = Color(0.168627, 0.137255, 0.12549, 1)
 polygon = PackedVector2Array(-10, -160, 10, -160, 10, 160, -10, 160)
+
+[node name="WallTopMid" type="StaticBody2D" parent="ExpansionBarriers" unique_id=468753145 groups=["bouncy_surface"]]
+position = Vector2(640, 10)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallTopMid" unique_id=1049218851]
+shape = SubResource("RectangleShape2D_horizontal_seal")
+
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallTopMid" unique_id=2063828681]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-40, -10, 40, -10, 40, 10, -40, 10)
+
+[node name="WallBottomMid" type="StaticBody2D" parent="ExpansionBarriers" unique_id=173104475 groups=["bouncy_surface"]]
+position = Vector2(640, 710)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallBottomMid" unique_id=1870406634]
+shape = SubResource("RectangleShape2D_horizontal_seal")
+
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallBottomMid" unique_id=1494685573]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-40, -10, 40, -10, 40, 10, -40, 10)
+
+[node name="WallLeftMid" type="StaticBody2D" parent="ExpansionBarriers" unique_id=1001093738 groups=["bouncy_surface"]]
+position = Vector2(10, 360)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallLeftMid" unique_id=1268458897]
+shape = SubResource("RectangleShape2D_vertical_seal")
+
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallLeftMid" unique_id=1587369028]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-10, -40, 10, -40, 10, 40, -10, 40)
+
+[node name="WallRightMid" type="StaticBody2D" parent="ExpansionBarriers" unique_id=370281364 groups=["bouncy_surface"]]
+position = Vector2(1270, 360)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExpansionBarriers/WallRightMid" unique_id=673272239]
+shape = SubResource("RectangleShape2D_vertical_seal")
+
+[node name="Visual" type="Polygon2D" parent="ExpansionBarriers/WallRightMid" unique_id=1877716379]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-10, -40, 10, -40, 10, 40, -10, 40)
+
+[node name="OuterPerimeterWalls" type="Node2D" parent="." unique_id=1002644043]
+
+[node name="OuterWallTop" type="StaticBody2D" parent="OuterPerimeterWalls" unique_id=468753144 groups=["bouncy_surface"]]
+position = Vector2(640, -350)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="OuterPerimeterWalls/OuterWallTop" unique_id=1049218850]
+shape = SubResource("RectangleShape2D_outer_horizontal")
+
+[node name="Visual" type="Polygon2D" parent="OuterPerimeterWalls/OuterWallTop" unique_id=2063828680]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-1280, -10, 1280, -10, 1280, 10, -1280, 10)
+
+[node name="OuterWallBottom" type="StaticBody2D" parent="OuterPerimeterWalls" unique_id=173104474 groups=["bouncy_surface"]]
+position = Vector2(640, 1070)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="OuterPerimeterWalls/OuterWallBottom" unique_id=1870406633]
+shape = SubResource("RectangleShape2D_outer_horizontal")
+
+[node name="Visual" type="Polygon2D" parent="OuterPerimeterWalls/OuterWallBottom" unique_id=1494685572]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-1280, -10, 1280, -10, 1280, 10, -1280, 10)
+
+[node name="OuterWallLeft" type="StaticBody2D" parent="OuterPerimeterWalls" unique_id=1001093737 groups=["bouncy_surface"]]
+position = Vector2(-630, 360)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="OuterPerimeterWalls/OuterWallLeft" unique_id=1268458896]
+shape = SubResource("RectangleShape2D_outer_vertical")
+
+[node name="Visual" type="Polygon2D" parent="OuterPerimeterWalls/OuterWallLeft" unique_id=1587369027]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-10, -720, 10, -720, 10, 720, -10, 720)
+
+[node name="OuterWallRight" type="StaticBody2D" parent="OuterPerimeterWalls" unique_id=370281363 groups=["bouncy_surface"]]
+position = Vector2(1910, 360)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="OuterPerimeterWalls/OuterWallRight" unique_id=673272238]
+shape = SubResource("RectangleShape2D_outer_vertical")
+
+[node name="Visual" type="Polygon2D" parent="OuterPerimeterWalls/OuterWallRight" unique_id=1877716378]
+color = Color(0.168627, 0.137255, 0.12549, 1)
+polygon = PackedVector2Array(-10, -720, 10, -720, 10, 720, -10, 720)
 
 [node name="SpawnGates" type="Node2D" parent="." unique_id=128588747]
 
 [node name="GateTop" type="Marker2D" parent="SpawnGates" unique_id=1896006173 groups=["spawn_gate"]]
-position = Vector2(640, -40)
+position = Vector2(640, 40)
 
 [node name="GateBottom" type="Marker2D" parent="SpawnGates" unique_id=1926393494 groups=["spawn_gate"]]
-position = Vector2(640, 760)
+position = Vector2(640, 680)
 
 [node name="GateLeft" type="Marker2D" parent="SpawnGates" unique_id=939148147 groups=["spawn_gate"]]
-position = Vector2(-40, 360)
+position = Vector2(40, 360)
 
 [node name="GateRight" type="Marker2D" parent="SpawnGates" unique_id=1724176638 groups=["spawn_gate"]]
-position = Vector2(1340, 360)
+position = Vector2(1240, 360)
+
+[node name="OuterGates" type="Node2D" parent="SpawnGates" unique_id=128588748]
+
+[node name="OuterGateTop" type="Marker2D" parent="SpawnGates/OuterGates" unique_id=1896006174 groups=["outer_spawn_gate"]]
+position = Vector2(640, -300)
+
+[node name="OuterGateBottom" type="Marker2D" parent="SpawnGates/OuterGates" unique_id=1926393495 groups=["outer_spawn_gate"]]
+position = Vector2(640, 1020)
+
+[node name="OuterGateLeft" type="Marker2D" parent="SpawnGates/OuterGates" unique_id=939148148 groups=["outer_spawn_gate"]]
+position = Vector2(-580, 360)
+
+[node name="OuterGateRight" type="Marker2D" parent="SpawnGates/OuterGates" unique_id=1724176639 groups=["outer_spawn_gate"]]
+position = Vector2(1860, 360)
 
 [node name="Obstacles" type="Node2D" parent="." unique_id=1867628492]
 
@@ -172,7 +301,37 @@ position = Vector2(880, 360)
 [node name="MudC" parent="Obstacles" unique_id=2008469082 instance=ExtResource("4_mud")]
 position = Vector2(640, 200)
 
+[node name="OuterBunkerNW" parent="Obstacles" unique_id=2088598193 instance=ExtResource("2_bunker")]
+position = Vector2(-460, 140)
+rotation = 0.7853982
+
+[node name="OuterBunkerNE" parent="Obstacles" unique_id=1640433774 instance=ExtResource("2_bunker")]
+position = Vector2(1740, 140)
+rotation = 2.3561945
+
+[node name="OuterBunkerSW" parent="Obstacles" unique_id=350485652 instance=ExtResource("2_bunker")]
+position = Vector2(-460, 880)
+rotation = 5.497787
+
+[node name="OuterBunkerSE" parent="Obstacles" unique_id=698296621 instance=ExtResource("2_bunker")]
+position = Vector2(1840, 1000)
+rotation = 3.9269908
+
+[node name="OuterMudTop" parent="Obstacles" unique_id=969583561 instance=ExtResource("4_mud")]
+position = Vector2(400, -180)
+
+[node name="OuterMudLeft" parent="Obstacles" unique_id=1482305183 instance=ExtResource("4_mud")]
+position = Vector2(-260, 540)
+
+[node name="OuterMudRight" parent="Obstacles" unique_id=2008469083 instance=ExtResource("4_mud")]
+position = Vector2(1400, 540)
+
+[node name="OuterMudBottom" parent="Obstacles" unique_id=969583562 instance=ExtResource("4_mud")]
+position = Vector2(320, 900)
+
 [node name="Enemies" type="Node2D" parent="." unique_id=1469536440]
+
+[node name="InvasionSector" type="Node2D" parent="." unique_id=1469536441]
 
 [node name="Player" parent="." unique_id=808563476 instance=ExtResource("5_player")]
 

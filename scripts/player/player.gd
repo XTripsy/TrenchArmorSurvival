@@ -112,6 +112,12 @@ func take_damage(amount: int, _is_ricochet: bool = false) -> void:
 	else:
 		_start_iframes()
 
+func heal(amount: int) -> void:
+	if not _alive or amount <= 0:
+		return
+	hp = mini(MAX_HP, hp + amount)
+	EventBus.player_damaged.emit(hp, MAX_HP)
+
 func _flash_white() -> void:
 	hull_visual.modulate = Color(10.0, 10.0, 10.0, 1.0)
 	turret_visual.modulate = Color(10.0, 10.0, 10.0, 1.0)

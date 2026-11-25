@@ -20,6 +20,7 @@ var _engine_player: AudioStreamPlayer = null
 var _bgm_player: AudioStreamPlayer = null
 var last_sfx: StringName = &""
 var _engine_moving: bool = false
+var _last_player_hp: int = -1
 var _hit: PackedVector2Array
 var _bgm: PackedVector2Array
 
@@ -48,6 +49,7 @@ func _ready() -> void:
 
 func _on_game_state_changed(new_state: int) -> void:
 	if new_state == GameManager.State.PLAYING:
+		_last_player_hp = -1
 		if _engine_player == null:
 			play_engine(_engine_moving)
 		start_bgm()
@@ -140,8 +142,11 @@ func _render_hit() -> PackedVector2Array:
 		frames[i] = Vector2(value, value)
 	return frames
 
-func _on_player_damaged(_current_hp: int, _max_hp: int) -> void:
-	play_hit()
+func _on_player_damaged(current_hp: int, _max_hp: int) -> void:
+	var took_damage: bool = _last_player_hp < 0 or current_hp < _last_player_hp
+	_last_player_hp = current_hp
+	if took_damage:
+		play_hit()
 
 func _on_enemy_destroyed(_pos: Vector2, _score: int, _was_ricochet: bool) -> void:
 	play_explosion()
