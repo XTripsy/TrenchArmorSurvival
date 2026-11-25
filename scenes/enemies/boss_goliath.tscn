@@ -1,0 +1,81 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/boss_goliath.gd" id="1_boss"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_boss"]
+size = Vector2(112, 72)
+
+[node name="BossGoliath" type="CharacterBody2D" groups=["enemy", "boss"]]
+collision_layer = 2
+collision_mask = 47
+motion_mode = 1
+script = ExtResource("1_boss")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_boss")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.211765, 0.223529, 0.247059, 1)
+polygon = PackedVector2Array(-56, -36, 48, -36, 58, -18, 58, 18, 48, 36, -56, 36)
+
+[node name="TrackLeft" type="Polygon2D" parent="Visual"]
+color = Color(0.117647, 0.12549, 0.137255, 1)
+polygon = PackedVector2Array(-52, -42, 44, -42, 44, -32, -52, -32)
+
+[node name="TrackRight" type="Polygon2D" parent="Visual"]
+color = Color(0.117647, 0.12549, 0.137255, 1)
+polygon = PackedVector2Array(-52, 32, 44, 32, 44, 42, -52, 42)
+
+[node name="ArmorFront" type="Polygon2D" parent="Visual"]
+color = Color(0.545098, 0.227451, 0.227451, 1)
+polygon = PackedVector2Array(18, -30, 48, -18, 48, 18, 18, 30)
+
+[node name="ArmorRear" type="Polygon2D" parent="Visual"]
+color = Color(0.545098, 0.227451, 0.227451, 1)
+polygon = PackedVector2Array(-50, -28, -18, -28, -18, 28, -50, 28)
+
+[node name="Rivets" type="Node2D" parent="Visual"]
+
+[node name="RivetA" type="Polygon2D" parent="Visual/Rivets"]
+position = Vector2(-40, -14)
+color = Color(0.690196, 0.709804, 0.72549, 1)
+polygon = PackedVector2Array(-3, 0, 0, -3, 3, 0, 0, 3)
+
+[node name="RivetB" type="Polygon2D" parent="Visual/Rivets"]
+position = Vector2(-40, 14)
+color = Color(0.690196, 0.709804, 0.72549, 1)
+polygon = PackedVector2Array(-3, 0, 0, -3, 3, 0, 0, 3)
+
+[node name="RivetC" type="Polygon2D" parent="Visual/Rivets"]
+position = Vector2(32, -20)
+color = Color(0.690196, 0.709804, 0.72549, 1)
+polygon = PackedVector2Array(-3, 0, 0, -3, 3, 0, 0, 3)
+
+[node name="RivetD" type="Polygon2D" parent="Visual/Rivets"]
+position = Vector2(32, 20)
+color = Color(0.690196, 0.709804, 0.72549, 1)
+polygon = PackedVector2Array(-3, 0, 0, -3, 3, 0, 0, 3)
+
+[node name="Outline" type="Line2D" parent="Visual"]
+width = 2.5
+default_color = Color(0.85098, 0.788235, 0.639216, 1)
+points = PackedVector2Array(-56, -36, 48, -36, 58, -18, 58, 18, 48, 36, -56, 36, -56, -36)
+
+[node name="TurretPivot" type="Node2D" parent="."]
+position = Vector2(6, 0)
+
+[node name="TurretVisual" type="Polygon2D" parent="TurretPivot"]
+color = Color(0.545098, 0.227451, 0.227451, 1)
+polygon = PackedVector2Array(-24, -17, 22, -13, 34, 0, 22, 13, -24, 17)
+
+[node name="TurretOutline" type="Line2D" parent="TurretPivot/TurretVisual"]
+width = 2.0
+default_color = Color(0.85098, 0.788235, 0.639216, 1)
+points = PackedVector2Array(-24, -17, 22, -13, 34, 0, 22, 13, -24, 17, -24, -17)
+
+[node name="Barrel" type="Polygon2D" parent="TurretPivot/TurretVisual"]
+color = Color(0.211765, 0.223529, 0.247059, 1)
+polygon = PackedVector2Array(10, -6, 66, -5, 74, 0, 66, 5, 10, 6)
+
+[node name="MuzzleMarker" type="Marker2D" parent="TurretPivot"]
+position = Vector2(78, 0)
