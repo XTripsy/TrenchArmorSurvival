@@ -19,6 +19,7 @@ func _ready() -> void:
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(frame)
+	overlay.move_child(frame, 0)
 	UIThemeBuilder.setup_tactical_button(audio_button)
 	UIThemeBuilder.setup_tactical_button(resume_button)
 	_audio_button_refresh()

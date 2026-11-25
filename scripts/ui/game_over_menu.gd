@@ -7,7 +7,7 @@ const REPORT_CONTENT_HEIGHT: float = 300.0
 const RECORD_BADGE_TOP: float = 272.0
 const RECORD_BADGE_HEIGHT: float = 28.0
 var _is_redeploying: bool = false
-var _report_card: PanelContainer
+var _report_card: Panel
 
 @onready var overlay: Control = $Overlay
 @onready var header_label: Label = $Overlay/HeaderLabel
@@ -34,7 +34,7 @@ func _ready() -> void:
 		_show_stats()
 
 func _build_report_decoration() -> void:
-	_report_card = PanelContainer.new()
+	_report_card = Panel.new()
 	_report_card.name = "ReportCard"
 	_report_card.position = Vector2(410, REPORT_CONTENT_TOP)
 	_report_card.custom_minimum_size = Vector2(REPORT_CONTENT_WIDTH, REPORT_CONTENT_HEIGHT)

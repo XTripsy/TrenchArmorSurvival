@@ -632,8 +632,6 @@ func _draw_minimap(canvas: CanvasItem, viewport_size: Vector2) -> void:
 	if player != null:
 		var p_pos: Vector2 = _to_minimap(player.global_position, inner)
 		canvas.draw_circle(p_pos, 3.5, Color.WHITE)
-		var turret_dir: Vector2 = Vector2.RIGHT.rotated(player.rotation)
-		canvas.draw_line(p_pos, p_pos + turret_dir * 9.0, Color.WHITE, 1.5)
 
 func _to_minimap(world_position: Vector2, inner: Rect2) -> Vector2:
 	var normalized: Vector2 = (world_position - _active_bounds.position) / _active_bounds.size
