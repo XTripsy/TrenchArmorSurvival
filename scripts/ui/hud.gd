@@ -5,7 +5,7 @@ const SAFE_MARGIN: float = 24.0
 const POINTER_MARGIN: float = 32.0
 
 # Minimap constants
-const MINIMAP_SIZE: Vector2 = Vector2(160.0, 90.0)
+const MINIMAP_SIZE: Vector2 = Vector2(168.0, 94.0)
 const MINIMAP_ENEMY_LIMIT: int = 80
 
 # Dynamic State
@@ -17,6 +17,8 @@ var _boss_trail_tween: Tween = null
 var _last_score: int = 0
 var _last_player_hp: int = 3
 var _reticle_spread: float = 0.0
+var _radar_angle: float = 0.0
+var _ricochet_streak: int = 0
 
 # UI Nodes
 @onready var root: Control = $HUDRoot
@@ -24,8 +26,10 @@ var _reticle_spread: float = 0.0
 # Top-Left Nodes
 var armor_card: PanelContainer
 var armor_container: HBoxContainer
+var armor_status_lbl: Label
 var _armor_segments: Array[PanelContainer] = []
 var _critical_tween: Tween = null
+var _chassis_icon: Control = null
 
 # Top-Center Nodes
 var phase_card: Control
@@ -43,6 +47,13 @@ var _invasion_badges: Array[PanelContainer] = []
 var telemetry_card: VBoxContainer
 var score_label: Label
 var time_label: Label
+var streak_pill: PanelContainer
+
+# Overlay Layer 2 Phase Banner
+var banner_layer: CanvasLayer
+var banner_panel: PanelContainer
+var banner_label: Label
+var crimson_vignette: ColorRect
 
 # Overlay for Diegetic Pointers & Minimap
 var _tactical_overlay: Control = null
@@ -63,6 +74,7 @@ func _ready() -> void:
 	EventBus.sector_cleared.connect(_on_sector_cleared)
 
 	_build_ui()
+	_build_banner_layer()
 	_refresh_score(GameManager.score)
 	var player: Node = get_tree().get_first_node_in_group("player")
 	var initial_hp: int = 3
@@ -79,17 +91,40 @@ func _build_ui() -> void:
 	armor_card.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_BG_DARK, UIThemeBuilder.UI_BORDER_STEEL))
 	root.add_child(armor_card)
 
+	var armor_frame: TacticalFrame = TacticalFrame.new()
+	armor_frame.show_brackets = true
+	armor_frame.show_scanlines = true
+	armor_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	armor_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	armor_card.add_child(armor_frame)
+
+	var armor_hbox := HBoxContainer.new()
+	armor_hbox.add_theme_constant_override("separation", 8)
+	armor_card.add_child(armor_hbox)
+
+	_chassis_icon = ChassisIcon.new()
+	_chassis_icon.custom_minimum_size = Vector2(36, 36)
+	armor_hbox.add_child(_chassis_icon)
+
 	var armor_vbox := VBoxContainer.new()
 	armor_vbox.add_theme_constant_override("separation", 4)
-	armor_card.add_child(armor_vbox)
+	armor_hbox.add_child(armor_vbox)
+
+	var header_row := HBoxContainer.new()
+	armor_vbox.add_child(header_row)
 
 	var armor_lbl := Label.new()
-	armor_lbl.text = "ARMOR INTEGRITY"
+	armor_lbl.text = "CHASSIS // VANGUARD-01"
 	armor_lbl.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
-	armor_vbox.add_child(armor_lbl)
+	header_row.add_child(armor_lbl)
+
+	armor_status_lbl = Label.new()
+	armor_status_lbl.text = "NOMINAL"
+	armor_status_lbl.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.SEMANTIC_ALLY)
+	header_row.add_child(armor_status_lbl)
 
 	armor_container = HBoxContainer.new()
-	armor_container.add_theme_constant_override("separation", 4)
+	armor_container.add_theme_constant_override("separation", 6)
 	armor_vbox.add_child(armor_container)
 
 	# 2. Top-Center: Phase & Objective Tracker
@@ -99,8 +134,8 @@ func _build_ui() -> void:
 	root.add_child(phase_card)
 
 	var phase_vbox := VBoxContainer.new()
-	phase_vbox.position = Vector2(1280.0 * 0.5 - 220.0, SAFE_MARGIN)
-	phase_vbox.custom_minimum_size = Vector2(440.0, 60.0)
+	phase_vbox.position = Vector2(1280.0 * 0.5 - 230.0, SAFE_MARGIN)
+	phase_vbox.custom_minimum_size = Vector2(460.0, 60.0)
 	phase_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	phase_card.add_child(phase_vbox)
 
@@ -111,7 +146,7 @@ func _build_ui() -> void:
 
 	# Skirmish Progress Bar
 	skirmish_bar = ProgressBar.new()
-	skirmish_bar.custom_minimum_size = Vector2(336.0, 12.0)
+	skirmish_bar.custom_minimum_size = Vector2(360.0, 14.0)
 	skirmish_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	skirmish_bar.show_percentage = false
 	var skirmish_bg := UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1)
@@ -122,7 +157,7 @@ func _build_ui() -> void:
 
 	# Boss Bar (Double layer for trail)
 	boss_bar_back = PanelContainer.new()
-	boss_bar_back.custom_minimum_size = Vector2(440.0, 16.0)
+	boss_bar_back.custom_minimum_size = Vector2(460.0, 18.0)
 	boss_bar_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	boss_bar_back.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
 	boss_bar_back.visible = false
@@ -147,7 +182,7 @@ func _build_ui() -> void:
 
 	for i: int in 3:
 		var badge := PanelContainer.new()
-		badge.custom_minimum_size = Vector2(72.0, 24.0)
+		badge.custom_minimum_size = Vector2(84.0, 28.0)
 		badge.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
 		var lbl := Label.new()
 		lbl.name = "BadgeLabel"
@@ -160,20 +195,20 @@ func _build_ui() -> void:
 
 	# 3. Top-Right: Telemetry Panel
 	telemetry_card = VBoxContainer.new()
-	telemetry_card.position = Vector2(1280.0 - SAFE_MARGIN - 200.0, SAFE_MARGIN)
-	telemetry_card.custom_minimum_size = Vector2(200.0, 60.0)
+	telemetry_card.position = Vector2(1280.0 - SAFE_MARGIN - 210.0, SAFE_MARGIN)
+	telemetry_card.custom_minimum_size = Vector2(210.0, 70.0)
 	telemetry_card.alignment = BoxContainer.ALIGNMENT_END
 	root.add_child(telemetry_card)
 
 	var score_micro := Label.new()
-	score_micro.text = "SCORE"
+	score_micro.text = "COMBAT SCORE"
 	score_micro.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	score_micro.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
 	telemetry_card.add_child(score_micro)
 
 	score_label = Label.new()
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	score_label.pivot_offset = Vector2(200.0, 12.0)
+	score_label.pivot_offset = Vector2(210.0, 12.0)
 	score_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_METRIC, UIThemeBuilder.UI_TEXT_PRIMARY)
 	telemetry_card.add_child(score_label)
 
@@ -182,10 +217,17 @@ func _build_ui() -> void:
 	time_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_LABEL, UIThemeBuilder.UI_TEXT_MUTED)
 	telemetry_card.add_child(time_label)
 
+	streak_pill = PanelContainer.new()
+	streak_pill.visible = false
+	streak_pill.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_BG_ELEVATED, UIThemeBuilder.SEMANTIC_CRIT, 2, 1))
+	var streak_lbl := Label.new()
+	streak_lbl.name = "StreakLabel"
+	streak_lbl.text = "RICOCHET STREAK x2"
+	streak_lbl.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.SEMANTIC_CRIT)
+	streak_pill.add_child(streak_lbl)
+	telemetry_card.add_child(streak_pill)
+
 	# 4. Tactical Overlay (_draw for radar & off-screen pointers)
-	_tactical_overlay = Control.new()
-	_tactical_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_tactical_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tactical_overlay: TacticalOverlay = TacticalOverlay.new()
 	tactical_overlay.hud = self
 	_tactical_overlay = tactical_overlay
@@ -193,6 +235,48 @@ func _build_ui() -> void:
 
 	# 5. Diegetic Reticle
 	_build_reticle()
+
+func _build_banner_layer() -> void:
+	banner_layer = CanvasLayer.new()
+	banner_layer.layer = 2
+	add_child(banner_layer)
+
+	crimson_vignette = ColorRect.new()
+	crimson_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	crimson_vignette.color = Color(0.82, 0.23, 0.23, 0.0)
+	crimson_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner_layer.add_child(crimson_vignette)
+
+	banner_panel = PanelContainer.new()
+	banner_panel.custom_minimum_size = Vector2(720, 50)
+	banner_panel.position = Vector2(1280.0 * 0.5 - 360.0, 128.0)
+	banner_panel.visible = false
+	banner_panel.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_BG_DARK, UIThemeBuilder.UI_BORDER_ACTIVE, 4, 2))
+	banner_layer.add_child(banner_panel)
+
+	var frame: TacticalFrame = TacticalFrame.new()
+	frame.show_hazard_stripes = true
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner_panel.add_child(frame)
+
+	banner_label = Label.new()
+	banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	banner_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	banner_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_HEADER, UIThemeBuilder.UI_BORDER_ACTIVE)
+	banner_panel.add_child(banner_label)
+
+func show_phase_banner(message: String) -> void:
+	banner_label.text = message
+	banner_panel.visible = true
+	banner_panel.modulate.a = 0.0
+	banner_panel.position.x = 1280.0 * 0.5 - 360.0 - 80.0
+	var tween: Tween = create_tween()
+	tween.tween_property(banner_panel, "modulate:a", 1.0, 0.2)
+	tween.parallel().tween_property(banner_panel, "position:x", 1280.0 * 0.5 - 360.0, 0.2)
+	tween.tween_interval(1.3)
+	tween.tween_property(banner_panel, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(func() -> void: banner_panel.visible = false)
 
 func _build_reticle() -> void:
 	reticle = Control.new()
@@ -216,6 +300,12 @@ func _process(delta: float) -> void:
 	_refresh_time()
 	_refresh_objective()
 	_update_reticle(delta)
+	_radar_angle = fmod(_radar_angle + delta * TAU * 0.5, TAU)
+	if is_instance_valid(_chassis_icon):
+		var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
+		if player != null:
+			_chassis_icon.rotation = player.rotation
+			_chassis_icon.queue_redraw()
 
 func _update_reticle(delta: float) -> void:
 	reticle.position = reticle.get_global_mouse_position()
@@ -232,31 +322,33 @@ func _update_reticle(delta: float) -> void:
 	var line_len: float = 6.0
 	var line_w: float = 2.0
 
-	# Top
 	var top: ColorRect = reticle.get_node("Line0") as ColorRect
 	top.position = Vector2(-line_w * 0.5, -gap - line_len)
 	top.size = Vector2(line_w, line_len)
 
-	# Bottom
 	var bot: ColorRect = reticle.get_node("Line1") as ColorRect
 	bot.position = Vector2(-line_w * 0.5, gap)
 	bot.size = Vector2(line_w, line_len)
 
-	# Left
 	var left: ColorRect = reticle.get_node("Line2") as ColorRect
 	left.position = Vector2(-gap - line_len, -line_w * 0.5)
 	left.size = Vector2(line_len, line_w)
 
-	# Right
 	var right: ColorRect = reticle.get_node("Line3") as ColorRect
 	right.position = Vector2(gap, -line_w * 0.5)
 	right.size = Vector2(line_len, line_w)
 
-func _on_score_updated(new_score: int, _ricochet_kills: int) -> void:
+func _on_score_updated(new_score: int, ricochet_kills: int) -> void:
 	if new_score > _last_score:
 		_punch_score()
 	_last_score = new_score
 	_refresh_score(new_score)
+	_ricochet_streak = ricochet_kills
+	if streak_pill != null:
+		streak_pill.visible = _ricochet_streak >= 2
+		var lbl: Label = streak_pill.get_node("StreakLabel") as Label
+		if lbl != null:
+			lbl.text = "🔥 RICOCHET STREAK x%d" % _ricochet_streak
 
 func _punch_score() -> void:
 	var tween := create_tween()
@@ -269,7 +361,11 @@ func _on_player_damaged(current_hp: int, max_hp: int) -> void:
 func _on_game_state_changed(_new_state: int) -> void:
 	reticle.visible = GameManager.state == GameManager.State.PLAYING
 
-func _on_phase_changed(_new_phase: int) -> void:
+func _on_phase_changed(new_phase: int) -> void:
+	if new_phase == int(GameManager.Phase.BOSS):
+		show_phase_banner("⚠ WARNING: IRON GOLIATH APPROACHING")
+	elif new_phase == int(GameManager.Phase.INVASION):
+		show_phase_banner("PERIMETER BREACHED — SECTOR EXPANDED")
 	if GameManager.current_phase == GameManager.Phase.SKIRMISH:
 		_boss_hp = 0
 		_boss_max_hp = 0
@@ -295,7 +391,7 @@ func _on_boss_hp_changed(current_hp: int, max_hp: int) -> void:
 	_boss_max_hp = max_hp
 	if _boss_trail_tween != null and _boss_trail_tween.is_running():
 		_boss_trail_tween.kill()
-	
+
 	_boss_trail_tween = create_tween()
 	_boss_trail_tween.tween_interval(0.25)
 	_boss_trail_tween.tween_property(self, "_boss_trail_hp", float(current_hp), 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -305,6 +401,7 @@ func _on_map_expanded(new_bounds: Rect2) -> void:
 	_active_bounds = new_bounds
 
 func _on_sector_cleared(_sector_num: int, bonus_score: int) -> void:
+	show_phase_banner("SECTOR CLEARED // REPAIRING INTEGRITY")
 	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
 	if player != null:
 		VFXManager.spawn_floating_text(player.global_position, "+%d SECTOR CLEARED!" % bonus_score)
@@ -319,7 +416,7 @@ func _refresh_time() -> void:
 func _refresh_objective() -> void:
 	match GameManager.current_phase:
 		GameManager.Phase.BOSS:
-			phase_header.text = "WARNING: IRON GOLIATH"
+			phase_header.text = "WARNING: IRON GOLIATH // RICOCHET WEAKNESS [2X DMG]"
 			phase_header.label_settings.font_color = UIThemeBuilder.UI_TEXT_DANGER
 			skirmish_bar.visible = false
 			boss_bar_back.visible = true
@@ -328,11 +425,11 @@ func _refresh_objective() -> void:
 			if _boss_max_hp > 0:
 				var fill_ratio: float = clampf(float(_boss_hp) / float(_boss_max_hp), 0.0, 1.0)
 				var trail_ratio: float = clampf(_boss_trail_hp / float(_boss_max_hp), 0.0, 1.0)
-				boss_bar_fill_panel.size = Vector2(440.0 * fill_ratio, 16.0)
-				boss_bar_trail_panel.size = Vector2(440.0 * trail_ratio, 16.0)
+				boss_bar_fill_panel.size = Vector2(460.0 * fill_ratio, 18.0)
+				boss_bar_trail_panel.size = Vector2(460.0 * trail_ratio, 18.0)
 
 		GameManager.Phase.INVASION:
-			phase_header.text = "TERRITORY INVASION — CAPTURE OUTPOSTS"
+			phase_header.text = "TERRITORY INVASION  //  CAPTURE ALL OUTPOSTS"
 			phase_header.label_settings.font_color = UIThemeBuilder.UI_TEXT_PRIMARY
 			skirmish_bar.visible = false
 			boss_bar_back.visible = false
@@ -340,7 +437,7 @@ func _refresh_objective() -> void:
 			_update_invasion_badges()
 
 		_:
-			phase_header.text = "SECTOR %02d — THREAT LEVEL" % GameManager.sector_index
+			phase_header.text = "SECTOR %02d  //  THREAT ESCALATION %d%%" % [GameManager.sector_index, int(GameManager.threat_progress)]
 			phase_header.label_settings.font_color = UIThemeBuilder.UI_TEXT_PRIMARY
 			skirmish_bar.visible = true
 			skirmish_bar.value = GameManager.threat_progress
@@ -377,27 +474,24 @@ func _update_invasion_badges() -> void:
 			badge.visible = false
 
 func _refresh_shields(current_hp: int, max_hp: int = 3) -> void:
-	# Rebuild segments if needed
 	if _armor_segments.size() != max_hp:
 		for seg: PanelContainer in _armor_segments:
 			seg.queue_free()
 		_armor_segments.clear()
 
-		var seg_width: float = 36.0 if max_hp <= 5 else 28.0
+		var seg_width: float = 38.0 if max_hp <= 5 else 30.0
 		for i: int in max_hp:
 			var seg := PanelContainer.new()
-			seg.custom_minimum_size = Vector2(seg_width, 14.0)
+			seg.custom_minimum_size = Vector2(seg_width, 16.0)
 			armor_container.add_child(seg)
 			_armor_segments.append(seg)
 
-	# Flash white on loss
 	if current_hp < _last_player_hp and _last_player_hp <= _armor_segments.size():
 		var lost_idx: int = _last_player_hp - 1
 		if lost_idx >= 0 and lost_idx < _armor_segments.size():
 			_flash_segment_white(_armor_segments[lost_idx])
 	_last_player_hp = current_hp
 
-	# Update styles
 	for i: int in max_hp:
 		var seg: PanelContainer = _armor_segments[i]
 		if i < current_hp:
@@ -408,13 +502,25 @@ func _refresh_shields(current_hp: int, max_hp: int = 3) -> void:
 		else:
 			seg.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_SURFACE, UIThemeBuilder.UI_BORDER_STEEL, 2, 1))
 
-	# Pulse tween for HP == 1
+	if armor_status_lbl != null:
+		if current_hp == 1:
+			armor_status_lbl.text = "CRITICAL"
+			armor_status_lbl.label_settings.font_color = UIThemeBuilder.SEMANTIC_DANGER
+		elif current_hp == 2:
+			armor_status_lbl.text = "CAUTION"
+			armor_status_lbl.label_settings.font_color = UIThemeBuilder.SEMANTIC_WARN
+		else:
+			armor_status_lbl.text = "NOMINAL"
+			armor_status_lbl.label_settings.font_color = UIThemeBuilder.SEMANTIC_ALLY
+
 	if current_hp == 1:
+		crimson_vignette.color.a = 0.16
 		if _critical_tween == null or not _critical_tween.is_running():
 			_critical_tween = create_tween().set_loops()
 			_critical_tween.tween_property(_armor_segments[0], "modulate:a", 0.55, 0.25)
 			_critical_tween.tween_property(_armor_segments[0], "modulate:a", 1.0, 0.25)
 	else:
+		crimson_vignette.color.a = 0.0
 		if _critical_tween != null and _critical_tween.is_running():
 			_critical_tween.kill()
 			if _armor_segments.size() > 0:
@@ -475,32 +581,32 @@ func _draw_direction_arrow(canvas: CanvasItem, viewport_size: Vector2, center: V
 	var points: PackedVector2Array = PackedVector2Array([tip, base + side, base - side])
 	canvas.draw_colored_polygon(points, color)
 
-	# Distance label in meters (%dm)
 	var dist_m: int = int((world_position - (camera.global_position if camera != null else center)).length() / 10.0)
 	var text := "%dm" % dist_m
 	var font := UIThemeBuilder.build_system_font()
 	canvas.draw_string(font, tip - direction * 30.0 + Vector2(-10, 4), text, HORIZONTAL_ALIGNMENT_CENTER, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_PRIMARY)
 
 func _draw_minimap(canvas: CanvasItem, viewport_size: Vector2) -> void:
-	var rect := Rect2(Vector2(viewport_size.x - MINIMAP_SIZE.x - SAFE_MARGIN, SAFE_MARGIN + 60.0), MINIMAP_SIZE)
+	var rect := Rect2(Vector2(viewport_size.x - MINIMAP_SIZE.x - SAFE_MARGIN, SAFE_MARGIN + 70.0), MINIMAP_SIZE)
 
-	# Frame
 	canvas.draw_rect(rect, UIThemeBuilder.UI_BG_DARK)
 	canvas.draw_rect(rect, UIThemeBuilder.UI_BORDER_STEEL, false, 2.0)
 
-	# Crosshair internal grid
 	canvas.draw_line(Vector2(rect.position.x + rect.size.x * 0.5, rect.position.y), Vector2(rect.position.x + rect.size.x * 0.5, rect.end.y), Color(1, 1, 1, 0.12), 1.0)
 	canvas.draw_line(Vector2(rect.position.x, rect.position.y + rect.size.y * 0.5), Vector2(rect.end.x, rect.position.y + rect.size.y * 0.5), Color(1, 1, 1, 0.12), 1.0)
+	canvas.draw_string(UIThemeBuilder.build_system_font(), rect.position + Vector2(4, 12), "A1", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
+	canvas.draw_string(UIThemeBuilder.build_system_font(), rect.position + Vector2(rect.size.x - 18, rect.size.y - 4), "B2", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_MUTED)
+
+	var sweep_end: Vector2 = rect.get_center() + Vector2.RIGHT.rotated(_radar_angle) * (rect.size.length() * 0.5)
+	canvas.draw_line(rect.get_center(), sweep_end, Color(0.369, 0.580, 0.231, 0.35), 2.0)
 
 	var inner := rect.grow(-4.0)
 
-	# 1. Bounds / Obstacles
 	for node: Node in get_tree().get_nodes_in_group("bouncy_surface"):
 		var obs: Node2D = node as Node2D
 		if obs != null:
 			canvas.draw_rect(Rect2(_to_minimap(obs.global_position, inner) - Vector2(3, 3), Vector2(6, 6)), UIThemeBuilder.UI_SURFACE)
 
-	# 2. Capture Zones
 	for node: Node in get_tree().get_nodes_in_group("capture_zone"):
 		var zone: Node2D = node as Node2D
 		if zone == null:
@@ -508,7 +614,6 @@ func _draw_minimap(canvas: CanvasItem, viewport_size: Vector2) -> void:
 		var point: Vector2 = _to_minimap(zone.global_position, inner)
 		canvas.draw_circle(point, 6.0, _zone_color(int(zone.get("state"))))
 
-	# 3. Enemies & Boss
 	var enemies: Array[Node] = get_tree().get_nodes_in_group("enemy")
 	var limit: int = mini(enemies.size(), MINIMAP_ENEMY_LIMIT)
 	for i: int in limit:
@@ -523,13 +628,12 @@ func _draw_minimap(canvas: CanvasItem, viewport_size: Vector2) -> void:
 			canvas.draw_circle(point, 5.0, UIThemeBuilder.SEMANTIC_DANGER)
 			canvas.draw_arc(point, 6.0, 0.0, TAU, 12, Color.WHITE, 1.5)
 
-	# 4. Player
 	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
 	if player != null:
 		var p_pos: Vector2 = _to_minimap(player.global_position, inner)
 		canvas.draw_circle(p_pos, 3.5, Color.WHITE)
 		var turret_dir: Vector2 = Vector2.RIGHT.rotated(player.rotation)
-		canvas.draw_line(p_pos, p_pos + turret_dir * 8.0, Color.WHITE, 1.5)
+		canvas.draw_line(p_pos, p_pos + turret_dir * 9.0, Color.WHITE, 1.5)
 
 func _to_minimap(world_position: Vector2, inner: Rect2) -> Vector2:
 	var normalized: Vector2 = (world_position - _active_bounds.position) / _active_bounds.size
@@ -546,6 +650,15 @@ func _zone_color(zone_state: int) -> Color:
 			return UIThemeBuilder.SEMANTIC_ALLY
 		_:
 			return UIThemeBuilder.UI_SURFACE
+
+class ChassisIcon:
+	extends Control
+
+	func _draw() -> void:
+		var c: Vector2 = size * 0.5
+		draw_rect(Rect2(c - Vector2(10, 14), Vector2(20, 28)), Color("#556B2F"))
+		draw_line(c, c + Vector2(0, -18), Color.WHITE, 2.0)
+		draw_circle(c, 5.0, UIThemeBuilder.UI_BORDER_STEEL)
 
 class TacticalOverlay:
 	extends Control
