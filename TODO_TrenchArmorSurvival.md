@@ -23,7 +23,7 @@
 
 ## PROGRESS LOG
 
-**Snapshot:** 2026-11-25 · Engine `4.7.2.stable.steam.ed1daf0bf` · **Next: Phase 12 — Professional UI/UX Overhaul (T-050..T-054), then Phase 9 QA (T-039..T-041)**
+**Snapshot:** 2026-11-25 · Engine `4.7.2.stable.steam.ed1daf0bf` · **Next: Phase 13 — Showcase Visual Polish & Rich Command UI (T-055..T-060), then Phase 9 QA (T-039..T-041)**
 
 | Phase | Tasks | Status | Bukti |
 |---|---|---|---|
@@ -36,21 +36,16 @@
 | 6 — Arena & Wave Director | T-024..T-027 | ✅ Selesai + terverifikasi | Harness headless `PASS` 167/167 exit 0; `--headless --editor --quit` exit 0 |
 | 7 — UI & Game Flow | T-028..T-034 | ✅ Selesai + terverifikasi | Harness headless `PASS` 93/93 + restart 5/5 exit 0; `--headless --editor --quit` exit 0 |
 | 8 — Audio & Juice Polish | T-035..T-038 | ✅ Selesai + review fixed | Harness headless `PASS` 74/74 + retry 4/4 exit 0; `--headless --editor --quit` exit 0 |
-| 9 — QA & Release | T-039..T-041 | 🔄 Berjalan (manual) | Akan dikerjakan manual setelah Phase 12 UI Overhaul selesai |
+| 9 — QA & Release | T-039..T-041 | 🔄 Berjalan (manual) | Akan dikerjakan manual setelah Phase 13 Showcase UI selesai |
 | 10 — Boss & Map Expansion | T-042..T-045 | ✅ Selesai + terverifikasi | Harness headless & windowed `PASS` 55/55 exit 0; `--headless --editor --quit` exit 0; `--headless --quit` exit 0 |
 | 11 — Territory Invasion & Playtest UI | T-046..T-049 | ✅ Selesai + terverifikasi | Harness headless & windowed `PASS` 55/55 exit 0; `--headless --editor --quit` exit 0; `--headless --quit` exit 0 |
-| 12 — Professional UI/UX Overhaul | T-050..T-054 | ✅ Selesai + terverifikasi | Editor parse exit 0; HUD harness 5/5; diegetic/menu harness 8/8; Phase 9 tetap manual |
+| 12 — Professional UI/UX Overhaul | T-050..T-054 | ✅ Selesai + terverifikasi | Editor parse exit 0; HUD harness 5/5; diegetic/menu harness 8/8 |
+| 13 — Showcase Visual Polish & Rich UI | T-055..T-059 | ✅ Selesai + terverifikasi | Editor parse exit 0; T-055 7/7; T-057 6/6; T-058 6/6; T-059 9/9; headless smoke exit 0 |
 
-### Ringkasan Foundation (Phase 0–8)
-- **Phase 0–3:** `project.godot` (`1280×720`, 60 Hz, 6 physics layers, 4 autoloads), `EventBus`, `GameManager` (`MENU/PLAYING/PAUSED/GAME_OVER`, score, hit-stop), `VFXManager`, `AudioManager` (`AudioStreamGenerator` 8-voice pool + BGM), `PlayerTank` (hull/turret, recoil, i-frames, tread marks), `PlayerBullet` (1× ricochet `#FF5500` 2× score), `EnemyBullet`.
-- **Phase 4–6:** `BaseEnemy`, `EnemyScout`, `EnemyArtillery`, `EnemyDreadnought`, `SteelBunker`, `SandbagBarricade`, `MudCrater`, `ArenaController`, `CameraShake`, `WaveDirector`.
-- **Phase 7–8:** `MainMenu`, `HUD`, `FloatingText`, `PauseMenu`, `GameOverMenu`, custom crosshair reticle (cursor restored in menus), audio polish & readability outlines.
-
-### Ringkasan Expansion (Phase 10–11)
-- **Boss:** `BossGoliath` "Iron Goliath" (16 HP +4/sector), spread volley 3 arah, mortar telegraph 1.1 s, advance; 1 damage direct / 2 ricochet; `boss_spawned`, `boss_hp_changed`, `boss_defeated`.
-- **Expansion:** `ExpansionBarriers` hancur saat Boss mati, arena aktif membesar ke `Rect2(-640, -360, 2560, 1440)`, outer `PerimeterWalls`, outer gates + cover, kamera berpindah dari fixed ke follow.
-- **Invasion:** 3 `CaptureZone` (radius 180, `+0.15/s`, contested pause, `+1 HP` & `+500`), 3 `EnemyPillbox` penjaga, wave patrol di outer gate, `sector_cleared` +1000 lalu sektor berikutnya.
-- **HUD:** objective tracker (`THREAT` → `IRON GOLIATH HP` → `ZONES CAPTURED`), panah off-screen untuk Boss/zone, minimap sudut kanan atas.
+### Ringkasan Foundation & Expansion (Phase 0–12)
+- **Phase 0–8:** Core autoloads (`EventBus`, `GameManager`, `VFXManager`, `AudioManager`), dual-control `PlayerTank`, `PlayerBullet` 1× ricochet (`#FF5500`, 2× score), 3 standard enemy types, environment obstacles, `WaveDirector`, audio synth pool, and core UI flow.
+- **Phase 10–11:** `BossGoliath` "Iron Goliath" (16 HP +4/sector, 1 direct / 2 ricochet damage), dynamic map expansion (`1280x720 -> 2560x1440`), camera follow unlock, 3 `CaptureZone` outposts (`+0.15/s`, `+500` & `+1 HP`), and `EnemyPillbox` guards.
+- **Phase 12:** `UIThemeBuilder` tokens, 3-zone HUD layout, colorblind-safe zone badges, delayed Boss HP trail, diegetic reload reticle, two-step abort confirmation, and `0.8s` Game Over input lockout.
 
 ---
 
@@ -70,27 +65,29 @@
 | Explosion | `#FF5500` + black smoke |
 | Capture Zone (Neutral / Capturing / Contested / Captured) | `#D9A738` / `#E5C158` / `#FF4444` / `#6B8E23` |
 
-### 1.2 UI Design Tokens (`UI_DESIGN §2` — Single Source of Truth)
+### 1.2 UI Design Tokens (`UI_DESIGN v3.0 §2` — Single Source of Truth)
 | Token Name | Hex Code | RGBA (`Color`) | Usage & Semantic Role |
 |---|---|---|---|
-| `UI_BG_DARK` | `#141618` | `(0.078, 0.086, 0.094, 0.90)` | Base surface for HUD cards & modals |
+| `UI_BG_DARK` | `#141618` | `(0.078, 0.086, 0.094, 0.92)` | Base surface for HUD cards & modals |
+| `UI_BG_ELEVATED` | `#1B1E22` | `(0.106, 0.118, 0.133, 0.95)` | Sub-cards, alternating AAR table rows, keycaps |
 | `UI_SURFACE` | `#22262A` | `(0.133, 0.149, 0.165, 0.95)` | Normal buttons, empty bar tracks, neutral nodes |
 | `UI_SURFACE_HOVER` | `#2E343B` | `(0.180, 0.204, 0.231, 1.0)` | Interactive hover / focus background |
 | `UI_BORDER_STEEL` | `#4D5660` | `(0.302, 0.337, 0.376, 1.0)` | Panel & button border (`border_width = 2px`) |
-| `UI_BORDER_ACTIVE` | `#E0AF3E` | `(0.878, 0.686, 0.243, 1.0)` | Hover/Focus border & tactical accent |
+| `UI_ORNAMENT_DIM` | `#6E7A87` | `(0.431, 0.478, 0.529, 0.75)` | Corner L-brackets, internal dividers, radar ticks |
+| `UI_BORDER_ACTIVE` | `#E0AF3E` | `(0.878, 0.686, 0.243, 1.0)` | Hover/Focus border, command accent, Rank S stamp |
 | `UI_TEXT_PRIMARY` | `#F4F1EA` | `(0.957, 0.945, 0.918, 1.0)` | Primary text, score digits, screen titles |
 | `UI_TEXT_MUTED` | `#A8B2BC` | `(0.659, 0.698, 0.737, 1.0)` | Secondary labels, timer, hotkey hints |
 | `UI_TEXT_DANGER` | `#FF6B6B` | `(1.000, 0.420, 0.420, 1.0)` | Boss warning text & Game Over header |
-| `SEMANTIC_ALLY` | `#5E943B` | `(0.369, 0.580, 0.231, 1.0)` | Active HP segments, `CAPTURED` zone |
-| `SEMANTIC_WARN` | `#E59528` | `(0.898, 0.584, 0.157, 1.0)` | Threat meter, `CAPTURING` zone |
+| `SEMANTIC_ALLY` | `#5E943B` | `(0.369, 0.580, 0.231, 1.0)` | Active HP segments, `CAPTURED` zone, `READY` status |
+| `SEMANTIC_WARN` | `#E59528` | `(0.898, 0.584, 0.157, 1.0)` | Threat meter, `CAPTURING` zone, tactical warning |
 | `SEMANTIC_DANGER` | `#D13B3B` | `(0.820, 0.231, 0.231, 1.0)` | Boss HP fill, critical HP (`HP == 1`), `CONTESTED` zone |
-| `SEMANTIC_CRIT` | `#FF6A1A` | `(1.000, 0.416, 0.102, 1.0)` | Floating combat text for `2x RICOCHET KILL` |
+| `SEMANTIC_CRIT` | `#FF6A1A` | `(1.000, 0.416, 0.102, 1.0)` | Floating combat text & streak for `RICOCHET KILL` |
 
-### 1.3 Typography, Spacing & Viewport Rules (`UI_DESIGN §1 & §2.2–2.3`)
-* **Viewport & Scaling:** Base resolution `1280x720`, Stretch Mode `canvas_items`, Stretch Aspect `expand`. HUD on `CanvasLayer (layer = 1)`, Modals/Overlays on `CanvasLayer (layer = 2)`.
+### 1.3 Typography, Spacing & Viewport Rules (`UI_DESIGN v3.0 §1 & §2.2–2.3`)
+* **Viewport & Scaling:** Base resolution `1280x720`, Stretch Mode `canvas_items`, Stretch Aspect `expand`. HUD on `CanvasLayer (layer = 1)`, Phase Banners & Vignette on `CanvasLayer (layer = 2)`, Modals/Overlays on `CanvasLayer (layer = 3)`.
 * **Font:** `SystemFont` fallback chain `["JetBrains Mono", "Consolas", "Liberation Mono", "Courier New"]`, `font_weight = 700` (Bold), `outline_size = 2`, `outline_color = #0B0C0E`.
-* **Scale:** `TYPE_DISPLAY = 48 px` (`+2 px` letter spacing), `TYPE_METRIC = 24 px` (`%06d`), `TYPE_HEADER = 18 px`, `TYPE_LABEL = 14 px`, `TYPE_MICRO = 12 px`.
-* **Grid & Radius:** `8 px` base grid (margins/paddings multiples of `4 px` / `8 px`), `24 px` safe screen margin, `12 px` horizontal / `8 px` vertical panel padding, `2 px` corner radius for micro bars, `4 px` corner radius for panels & buttons.
+* **Scale:** `TYPE_HERO = 52 px` (`+3 px` letter spacing), `TYPE_DISPLAY = 44 px` (`+2 px` letter spacing), `TYPE_METRIC = 24 px` (`%06d`), `TYPE_HEADER = 18 px`, `TYPE_LABEL = 14 px`, `TYPE_MICRO = 11–12 px`.
+* **Grid & Ornamentation:** `8 px` base grid, `24 px` safe screen margin, `8x8 px` corner L-brackets, `4 px` interval subtle scanlines (`alpha = 0.03`), `45°` diagonal hazard stripes (`alpha = 0.18`), and keycap badges for hotkeys.
 
 ### 1.4 Player
 `MAX_HP=3` · `BASE_SPEED=220.0` · `TURN_SPEED=10.0` · `FIRE_COOLDOWN=0.45` · `RECOIL_FORCE=40.0` · `IFRAME_DURATION=1.2` · Hitbox `36x36` · `heal(1)` on Capture Zone completion (clamped to `MAX_HP`).
@@ -148,7 +145,7 @@ res://
     ├── projectiles/   player_bullet.gd  enemy_bullet.gd
     ├── enemies/       base_enemy.gd  enemy_scout.gd  enemy_artillery.gd  enemy_dreadnought.gd  enemy_pillbox.gd  boss_goliath.gd
     ├── environment/   sandbag_barricade.gd  mud_crater.gd  capture_zone.gd
-    └── ui/            ui_theme_builder.gd  main_menu.gd  hud.gd  pause_menu.gd  game_over_menu.gd  floating_text.gd
+    └── ui/            ui_theme_builder.gd  tactical_frame.gd  main_menu.gd  hud.gd  pause_menu.gd  game_over_menu.gd  floating_text.gd
 ```
 
 ---
@@ -185,52 +182,66 @@ res://
 
 ---
 
-## PHASE 12 — Professional UI/UX Overhaul (`UI_DESIGN__TrenchArmorSurvival.md`)
+## PHASE 12 — Professional UI/UX Overhaul (Completed)
 
-- [x] **T-050** Create `scripts/ui/ui_theme_builder.gd` (`UIThemeBuilder`) & Button Pivot Helper (`UI_DESIGN §2 & §4.1`)
-  - Define static/constant design tokens matching §1.2 (`UI_BG_DARK`, `UI_SURFACE`, `UI_SURFACE_HOVER`, `UI_BORDER_STEEL`, `UI_BORDER_ACTIVE`, `UI_TEXT_PRIMARY`, `UI_TEXT_MUTED`, `UI_TEXT_DANGER`, `SEMANTIC_ALLY`, `SEMANTIC_WARN`, `SEMANTIC_DANGER`, `SEMANTIC_CRIT`) and typography scale constants (`TYPE_DISPLAY = 48`, `TYPE_METRIC = 24`, `TYPE_HEADER = 18`, `TYPE_LABEL = 14`, `TYPE_MICRO = 12`).
-  - Implement procedural `SystemFont` builder (`["JetBrains Mono", "Consolas", "Liberation Mono", "Courier New"]`, weight `700`, `outline_size = 2`, `outline_color = #0B0C0E`) and `StyleBoxFlat` generators for panels (`4 px` radius, `2 px` border, `12 px` H / `8 px` V padding) and buttons across all 4 states: Normal, Hover/Focus (`UI_BORDER_ACTIVE`), Pressed (`UI_BG_DARK`), and Disabled (`modulate.a = 0.45`).
-  - Provide a reusable button attachment helper (`setup_tactical_button(btn: Button) -> void`) that enforces `pivot_offset = size / 2` on `ready` and `resized`, connects `mouse_entered` / `focus_entered` / `mouse_exited` / `focus_exited` / `button_down` / `button_up` scale tweens (`1.03` hover, `0.97` pressed, `0.1s`), and triggers metallic click SFX via `AudioManager`.
-  - **DoD:** `UIThemeBuilder` compiles with strict static typing and generates consistent `Theme` / `StyleBoxFlat` resources and symmetric button pivot scaling with zero external font/image assets.
-- [x] **T-051** Upgrade `scripts/ui/hud.gd` — 3-Zone Tactical Layout, Segmented Armor Bar & Minimap (`UI_DESIGN §3.1–3.3`)
-  - Ensure HUD runs on `CanvasLayer (layer = 1)` with `24 px` viewport safe margins and `8 px` grid alignment.
-  - **Top-Left (`ARMOR INTEGRITY`):** Render `TYPE_MICRO` label + segmented `HBoxContainer` (`separation = 4 px`, `36x14 px` per segment, auto-scaling to `28x14 px` if `MAX_HP > 5`). Active segments use `SEMANTIC_ALLY` (`#84C458` `1 px` border), empty use `UI_SURFACE` (`UI_BORDER_STEEL` border). When `HP == 1`, switch active fill to `SEMANTIC_DANGER` with a `2 Hz` alpha pulse tween (`0.55 <-> 1.0`). On damage, flash the lost segment white (`#FFFFFF`) for `0.15s` before dimming to `UI_SURFACE`.
-  - **Top-Center (Dynamic Phase & Objective Tracker):** Transition between phases using a `0.25s` fade + `8 px` vertical slide tween:
-    1. `SKIRMISH`: `SECTOR %02d — THREAT LEVEL` (`TYPE_LABEL`) + `336x12 px` progress bar (`SEMANTIC_WARN`).
-    2. `BOSS`: `WARNING: IRON GOLIATH` (`TYPE_HEADER`, `UI_TEXT_DANGER`) + `440x16 px` Boss HP bar (`SEMANTIC_DANGER`) with a **delayed white damage trail bar** (`#FFFFFF`, `alpha = 0.85`) that shrinks after a `0.25s` delay over `0.30s` on hit.
-    3. `INVASION`: `TERRITORY INVASION — CAPTURE OUTPOSTS` + `3` colorblind-safe tactical node badges (`72x24 px`, `separation = 12 px`): `NEUTRAL` (`01 [ - ]`), `CAPTURING` (`01 [ ▲ ]` + `%`), `CONTESTED` (`01 [ ! ]` + pulsing border), `CAPTURED` (`01 [ ✓ ]`).
-  - **Top-Right (Telemetry & `160x90 px` Tactical Radar):** Right-aligned `SCORE` (`%06d` `TYPE_METRIC` with `1.0 -> 1.2 -> 1.0` `0.18s` scale punch anchored at center-right) + `TIME %02d:%02d`, with a `160x90 px` (`16:9`) minimap `8 px` below rendering arena bounds/obstacles (`UI_SURFACE`), capture zones (`r = 6 px`), enemies (`r = 2.5 px` `SEMANTIC_DANGER`, Boss `r = 5 px` white outline), and player (`r = 3.5 px` `#FFFFFF` + `8 px` turret direction line).
-  - **DoD:** All 3 HUD zones match exact dimensions, tokens, colorblind-safe icons, critical HP pulse, Boss damage trail, and minimap Z-order without overlapping gameplay.
-- [x] **T-052** Upgrade Diegetic & World-Space UI (`hud.gd` & `floating_text.gd`) (`UI_DESIGN §3.4`)
-  - **Off-Screen Objective Pointers:** Clamp pointers `32 px` from viewport edges, rotate toward off-screen priority targets (`Boss` or uncaptured `CaptureZone`), and render tactical arrow + distance readout in meters (`%dm`, `TYPE_MICRO`).
-  - **Diegetic Reload Reticle:** Render custom crosshair (`2 px` center dot + `4` lines of `6 px`) during `State.PLAYING`; expand line gap by `+8 px` upon firing and contract linearly back to `0 px` tied to remaining `fire_cooldown` (`0.45s`).
-  - **Floating Combat Text (`scripts/ui/floating_text.gd`):** Move upward `32 px` over `0.70s` (`ease-out`) and fade out, styled by event type: Normal Kill (`+100`, `TYPE_LABEL`, `UI_TEXT_PRIMARY`), Ricochet Kill (`+200 RICOCHET!`, `TYPE_HEADER`, `SEMANTIC_CRIT`, `1.25x` scale pop), Outpost Secured (`OUTPOST SECURED (+1 HP)`, `TYPE_HEADER`, `SEMANTIC_ALLY`).
-  - **DoD:** Reticle dynamically reflects `fire_cooldown`, off-screen arrows display accurate distance `%dm`, and floating combat text reflects normal/ricochet/outpost styling.
-- [x] **T-053** Overhaul `main_menu.gd`, `pause_menu.gd` & `game_over_menu.gd` with Safety Guards (`UI_DESIGN §4.2`)
-  - Place modal overlays on `CanvasLayer (layer = 2)` and apply `UIThemeBuilder` styles and `setup_tactical_button` to all buttons (`DEPLOY`, `RESUME`, `REDEPLOY`, `ABORT TO MENU`).
-  - **Main Menu (`scripts/ui/main_menu.gd`):** Live battlefield backdrop with dark vignette (`alpha = 0.45`), `TYPE_DISPLAY` title with military accent rule, auto-focused `DEPLOY` button, and bottom control strip (`[WASD] DRIVE  |  [MOUSE] AIM & FIRE  |  [ESC] PAUSE`).
-  - **Pause Overlay (`scripts/ui/pause_menu.gd`):** Full-screen dimmer `Color(0.04, 0.05, 0.06, 0.78)`, centered `360 px` tactical card (`TACTICAL PAUSE`, current run stats, quick `AUDIO: ON/OFF` toggle button, `RESUME`, and `ABORT TO MENU` with **Two-Step Abort Protection**: first click switches text to `CONFIRM ABORT?` with `SEMANTIC_DANGER` border for `3.0s`; second click within window exits to Main Menu).
-  - **Game Over / Debriefing (`scripts/ui/game_over_menu.gd`):** Trigger after a `0.6s` dramatic delay post-player explosion; show `ARMOR DESTROYED` (`TYPE_DISPLAY`, `UI_TEXT_DANGER`), debriefing stats card (*Final Score*, *Sector Reached*, *Outposts Captured*, *Ricochet Kills*), and `REDEPLOY` button with **`0.8s` Input Lockout Protection** (both `REDEPLOY` button and `Space`/`Enter` shortcuts remain disabled for the first `0.8s` to prevent accidental skip while firing).
-  - **DoD:** Two-step abort confirmation and `0.8s` Game Over input lockout work reliably, buttons scale cleanly from center, and `project.godot` stretch settings (`canvas_items` / `expand`) are verified.
-- [x] **T-054** UI & Full-Loop Verification (`--headless` + Windowed Visual Check)
-  - Run `godot --headless --quit` and automated harness checks covering `MainMenu -> Skirmish HUD -> Boss Damage Trail -> Invasion Zone Badges -> Pause 2-Step Abort -> Game Over 0.8s Lockout -> Redeploy`.
-  - **DoD:** Exit code `0`, zero parse/typing/runtime errors, and all `UI_DESIGN` tokens & interactions verified.
+- [x] **T-050** `scripts/ui/ui_theme_builder.gd` (`UIThemeBuilder`) & Button Pivot Helper.
+- [x] **T-051** `scripts/ui/hud.gd` — 3-Zone Tactical Layout, Segmented Armor Bar & Minimap.
+- [x] **T-052** Diegetic & World-Space UI (`hud.gd` & `floating_text.gd`).
+- [x] **T-053** `main_menu.gd`, `pause_menu.gd` & `game_over_menu.gd` with Safety Guards.
+- [x] **T-054** UI & Full-Loop Verification (`--headless` + Windowed Visual Check).
+
+---
+
+## PHASE 13 — Showcase Visual Polish, Diegetic Ornamentation & Rich Command UI (`UI_DESIGN v3.0`)
+
+- [x] **T-055** Create `scripts/ui/tactical_frame.gd` (`TacticalFrame`) & Extend `UIThemeBuilder` (`UI_DESIGN v3.0 §2.1–2.3`)
+  - Add new tokens to `UIThemeBuilder`: `UI_BG_ELEVATED` (`#1B1E22`), `UI_ORNAMENT_DIM` (`#6E7A87`, `alpha = 0.75`), and `TYPE_HERO = 52`, `TYPE_DISPLAY = 44`.
+  - Create reusable `TacticalFrame` (`Control` overlay or container decorator) with configurable flags: `show_brackets: bool` (`8x8 px` corner L-brackets `3 px` inset), `show_scanlines: bool` (`4 px` vertical interval, `alpha = 0.03`), `show_hazard_stripes: bool` (`45°` diagonal stripes, `alpha = 0.18`), and `accent_color: Color`.
+  - Add helper methods in `UIThemeBuilder` to generate **Physical Keycap Badges** (`create_keycap_badge(key_text: String, action_text: String) -> Control`) styled with `UI_BG_ELEVATED` and `2 px` bottom bevel border.
+  - **DoD:** `TacticalFrame` renders crisp procedural corner brackets, scanlines, hazard stripes, and keycap badges with zero external textures and zero parse/typing warnings.
+- [x] **T-056** Upgrade `scripts/ui/main_menu.gd` to Showcase Tactical War-Room Console (`UI_DESIGN v3.0 §3`)
+  - **Live Attract-Mode Battlefield Backdrop:** Render a live AI demo skirmish (or automated tank patrol + wall-bouncing tracer fire + smoke VFX) behind a radial edge vignette (`alpha = 0.55` edges, `0.18` center) and a `128 px` coordinate grid overlay (`alpha = 0.06`) with sector coordinate ticks.
+  - **Left Command Column (`x = 56 px`, `width = 480 px`):**
+    - Draw procedural **Military Crest Emblem** (`72x72 px` `_draw()`: hexagonal steel shield, olive tank silhouette, white star, twin gold chevrons).
+    - Render `● FIELD COMMAND TERMINAL // BUILD 1.0`, hero title `TRENCH ARMOR` (`TYPE_HERO`), and highlighted subtitle strip `SURVIVAL // RICOCHET TACTICS`.
+    - Build action stack (`DEPLOY TO SECTOR` `52 px` height with animated `>>` hover chevrons and auto-focus, `TACTICAL INTEL` `44 px`, `QUIT TO DESKTOP` `44 px`).
+  - **Right Interactive Field Manual Card (`width = 440 px`, `TacticalFrame`):**
+    - Implement 3 interactive tabs (`[1] COMBAT`, `[2] ESCALATION`, `[3] INVASION`) that auto-cycle every `6.0s` (pausing when clicked) with a `140 px` procedural `_draw()` tactical diagram illustrating: (1) yellow-to-orange `1x` wall ricochet `2x` score/piercing, (2) `100%` threat -> `Iron Goliath` boss, and (3) `1280x720 -> 2560x1440` 3-outpost capture expansion.
+  - **Bottom Telemetry Footer (`height = 44 px`):** Display physical keycap badges (`[W][A][S][D] DRIVE`, `[MOUSE] AIM`, `[LMB] FIRE`, `[ESC] PAUSE`) on the left and persisted/session `BEST RECORD: %06d` + `STATUS: COMBAT READY` on the right.
+  - **DoD:** Main Menu looks full, animated, and showcase-ready with live background action, procedural military emblem, interactive visual Field Manual diagrams, and keycap footer.
+- [x] **T-057** Enrich In-Game HUD Visuals, Chassis Silhouette & Radar Sweep (`scripts/ui/hud.gd`) (`UI_DESIGN v3.0 §4.1–4.4`)
+  - Wrap all 3 top HUD cards in `TacticalFrame` corner L-brackets and scanline ornamentation.
+  - **Top-Left Armor Card:** Add header `CHASSIS // VANGUARD-01` + live status pill (`NOMINAL` / `CAUTION` / `CRITICAL`), a `36x36 px` procedural top-down mini tank icon (`_draw()`) rotating with the player turret and flashing on hit, and upgrade HP bars to **chamfered parallelogram armor plates** (`38x16 px`) with top specular line and rivets.
+  - **Top-Center Phase Tracker:** Add phase counter (`PHASE 01/03`), `25% / 50% / 75%` milestone ticks on the Skirmish Threat bar, `45°` diagonal hazard stripes + `RICOCHET WEAKNESS [2X DMG]` subtitle on the Boss bar, and `3 px` bottom mini progress bars inside each of the 3 Invasion outpost badges.
+  - **Top-Right Telemetry & Radar Scope:** Add a dynamic **Ricochet Streak Pill** (`RICOCHET STREAK x%d` in `SEMANTIC_CRIT`) when chaining `>= 2` ricochet kills, upgrade the minimap (`168x94 px`) with `A1–B2` quadrant grid lines and a rotating radar sweep line (`0.5 rev/s`, `alpha = 0.08`), and add a subtle reload readiness arc under the custom crosshair reticle.
+  - **Phase Transition Banner & Critical Vignette (`CanvasLayer layer = 2`):** Add a `1.8s` slide-in tactical banner on phase changes (`WARNING: IRON GOLIATH APPROACHING`, `PERIMETER BREACHED — SECTOR EXPANDED`, `SECTOR CLEARED`) and a subtle pulsing crimson screen-edge vignette (`alpha = 0.16`) when `HP == 1`.
+  - **DoD:** HUD displays rich military telemetry, rotating mini tank silhouette, chamfered HP plates, radar sweep, phase transition banners, and ricochet streak feedback without obstructing center-screen visibility.
+- [x] **T-058** Upgrade Pause & Game Over After-Action Report Modals (`pause_menu.gd` & `game_over_menu.gd`) (`UI_DESIGN v3.0 §5`)
+  - Place modals on `CanvasLayer (layer = 3)` and decorate cards with `TacticalFrame` corner brackets and scanlines.
+  - **Pause Menu:** Add diagonal hazard header bar, quick controls keycap strip (`[WASD] Drive · [LMB] Ricochet Shot`), audio toggle, resume, and two-step abort confirmation (`CONFIRM ABORT?` with hazard stripes for `3.0s`).
+  - **Game Over / After-Action Report (`width = 460 px`):** Format stats as a 4-row alternating table (`UI_BG_ELEVATED` / `UI_BG_DARK`), display a `NEW RECORD!` badge when beating best score, and animate a **Procedural Performance Rank Stamp (`76x76 px` `_draw()`)** (`RANK S` >= 8000, `RANK A` >= 4500, `RANK B` >= 2000, `RANK C` < 2000) with a `2.2x -> 1.0x` (`0.22s`, `-6°` rotation) impact tween while preserving the `0.8s` `REDEPLOY` input lockout.
+  - **DoD:** Pause and Game Over screens feel like authentic military After-Action Reports with animated rank stamp, record tracking, and intact safety guards.
+- [x] **T-059** Showcase UI & Full-Loop Verification (`--headless` + Windowed Visual Check)
+  - Run `godot --headless --quit` and automated harness checks covering `MainMenu Attract-Mode & Field Manual Tabs -> Chamfered HUD & Radar Sweep -> Phase Transition Banner -> Ricochet Streak -> Pause Quick-Ref -> Game Over Rank Stamp & 0.8s Lockout -> Redeploy`.
+  - **DoD:** Exit code `0`, zero parse/typing/runtime errors, and all `UI_DESIGN v3.0` elements verified.
 
 ---
 
 ## PHASE 9 — QA & Final Release
 
-- [ ] **T-039** Playtest checklist (verify all base, expansion & UI mechanics):
-  - [ ] Ricochet once, orange color, 2x score + floating text (`+200 RICOCHET!`)
+- [ ] **T-039** Playtest checklist (verify all base, expansion & showcase UI mechanics):
+  - [ ] Main Menu displays live attract-mode battle, military crest emblem, auto-cycling Field Manual diagrams, and keycap footer
+  - [ ] Ricochet once, orange color, 2x score + floating text (`+200 RICOCHET!`) + Ricochet Streak pill on chains
+  - [ ] HUD displays L-bracket frames, rotating mini tank silhouette, chamfered HP plates, and sweeping radar scope
   - [ ] Dreadnought: 2 direct hits / 1 ricochet hit
   - [ ] Sandbag destroyed on 3rd hit; bullets do not bounce
   - [ ] Mud slows player & enemies by 35%
   - [ ] I-frames 1.2s; hit-stop & shake work correctly
-  - [ ] Threat reaches 100% -> Boss "Iron Goliath" spawns (1 direct / 2 ricochet damage) + delayed white damage trail bar
-  - [ ] Defeating Boss expands arena `1280x720 -> 2560x1440` and unlocks camera follow
-  - [ ] 3 Capture Zones capture/contest properly, show colorblind-safe HUD badges (`[-]`, `[▲]`, `[!]`, `[✓]`), restore +1 HP, and clear sector
-  - [ ] Off-screen zone arrows (`%dm`), diegetic reload reticle, and `160x90` minimap accurately reflect state
-  - [ ] Pause two-step abort (`CONFIRM ABORT?` 3.0s) and Game Over `0.8s` input lockout prevent accidental resets
+  - [ ] Threat reaches 100% -> Phase banner slides in -> Boss "Iron Goliath" spawns (1 direct / 2 ricochet damage) + delayed white damage trail bar
+  - [ ] Defeating Boss triggers `PERIMETER BREACHED` banner, expands arena `1280x720 -> 2560x1440`, and unlocks camera follow
+  - [ ] 3 Capture Zones capture/contest properly, show colorblind-safe HUD badges (`[-]`, `[▲]`, `[!]`, `[✓]`) + mini progress bars, restore +1 HP, and clear sector
+  - [ ] Off-screen zone arrows (`%dm`) and diegetic reload reticle accurately reflect state
+  - [ ] Pause two-step abort (`CONFIRM ABORT?` 3.0s) and Game Over `0.8s` input lockout + Rank Stamp (`S/A/B/C`) work cleanly
   - [ ] No errors in Output; stable 60 FPS
 - [ ] **T-040** Performance check: effect nodes are `queue_free`d; active `CPUParticles2D` nodes are bounded (one-shot).
 - [ ] **T-041** Update `README.md` with playtest controls, Boss/Expansion/Invasion loop guide, and export presets.
@@ -246,4 +257,4 @@ res://
 | 3 | Boss ricochet bonus | Follow **TAD §5.3** (`2` damage from ricochet, `1` damage from direct hit). |
 | 4 | Arena coordinate origin on expansion | Keep Inner Sector at `Rect2(0, 0, 1280, 720)` so existing player spawn `(640, 360)` and inner obstacle coordinates remain untouched; expand symmetrically to `Rect2(-640, -360, 2560, 1440)`. |
 | 5 | `player.take_damage` signature | Keep `take_damage(amount: int, _is_ricochet: bool = false)` and add `heal(amount: int) -> void` for Capture Zone rewards. |
-| 6 | UI Implementation Order & Precedence | Execute **Phase 12 (`T-050..T-054`)** before final manual QA (`T-039..T-041`). Follow `UI_DESIGN__TrenchArmorSurvival.md` for all UI colors, typography, `CanvasLayer` z-separation, and menu safety guards. |
+| 6 | Showcase UI Polish Order & Precedence | Execute **Phase 13 (`T-055..T-059`)** before final manual QA (`T-039..T-041`). Follow `UI_DESIGN__TrenchArmorSurvival.md (v3.0)` for all procedural ornaments, Main Menu attract-mode/Field Manual, HUD enrichment, and After-Action Report rank stamps. |
