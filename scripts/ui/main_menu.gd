@@ -244,22 +244,35 @@ class ManualDiagram:
 	var diagram_index: int = 0
 
 	func _draw() -> void:
-		var c: Vector2 = size * 0.5
 		draw_rect(Rect2(Vector2.ZERO, size), UIThemeBuilder.UI_BG_ELEVATED)
-		if diagram_index == 0:
-			draw_line(Vector2(40, 104), Vector2(220, 20), UIThemeBuilder.UI_BORDER_STEEL, 5.0)
-			draw_line(Vector2(30, 112), Vector2(130, 64), Color("#FFD700"), 3.0)
-			draw_line(Vector2(130, 64), Vector2(260, 104), Color("#FF5500"), 3.0)
-			draw_circle(Vector2(130, 64), 5, Color.WHITE)
-			draw_string(UIThemeBuilder.build_system_font(), Vector2(274, 108), "2X", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_HEADER, UIThemeBuilder.SEMANTIC_CRIT)
-		elif diagram_index == 1:
-			draw_arc(Vector2(100, 70), 52, PI, TAU, 24, UIThemeBuilder.SEMANTIC_WARN, 5.0)
-			draw_line(Vector2(100, 70), Vector2(270, 70), UIThemeBuilder.UI_BORDER_ACTIVE, 3.0)
-			draw_circle(Vector2(330, 70), 30, Color("#36393F"))
-			draw_string(UIThemeBuilder.build_system_font(), Vector2(286, 120), "IRON GOLIATH", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_DANGER)
-		else:
-			draw_rect(Rect2(36, 34, 130, 76), UIThemeBuilder.UI_SURFACE, false, 2.0)
-			draw_rect(Rect2(238, 20, 140, 96), UIThemeBuilder.UI_BORDER_STEEL, false, 2.0)
-			draw_line(Vector2(166, 72), Vector2(238, 72), UIThemeBuilder.UI_BORDER_ACTIVE, 3.0)
+		match diagram_index:
+			0:
+				_draw_combat_diagram()
+			1:
+				_draw_escalation_diagram()
+			_:
+				_draw_invasion_diagram()
+
+	func _draw_combat_diagram() -> void:
+		draw_line(Vector2(40, 104), Vector2(220, 20), UIThemeBuilder.UI_BORDER_STEEL, 5.0)
+		draw_line(Vector2(30, 112), Vector2(130, 64), Color("#FFD700"), 3.0)
+		draw_line(Vector2(130, 64), Vector2(260, 104), Color("#FF5500"), 3.0)
+		draw_circle(Vector2(130, 64), 5, Color.WHITE)
+		draw_string(UIThemeBuilder.build_system_font(), Vector2(274, 108), "2X SCORE", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_HEADER, UIThemeBuilder.SEMANTIC_CRIT)
+
+	func _draw_escalation_diagram() -> void:
+		draw_line(Vector2(36, 104), Vector2(36, 30), UIThemeBuilder.UI_BORDER_STEEL, 3.0)
+		draw_line(Vector2(36, 104), Vector2(190, 104), UIThemeBuilder.UI_BORDER_STEEL, 3.0)
+		draw_polyline(PackedVector2Array([Vector2(42, 96), Vector2(90, 84), Vector2(126, 68), Vector2(164, 42), Vector2(204, 26)]), UIThemeBuilder.SEMANTIC_WARN, 4.0)
+		draw_circle(Vector2(204, 26), 8.0, UIThemeBuilder.SEMANTIC_DANGER)
+		draw_circle(Vector2(330, 70), 30, Color("#36393F"))
+		draw_circle(Vector2(330, 70), 34, UIThemeBuilder.UI_TEXT_DANGER, false, 2.0)
+		draw_string(UIThemeBuilder.build_system_font(), Vector2(270, 122), "100% THREAT → IRON GOLIATH", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.UI_TEXT_DANGER)
+
+	func _draw_invasion_diagram() -> void:
+		draw_rect(Rect2(36, 34, 130, 76), UIThemeBuilder.UI_SURFACE, false, 2.0)
+		draw_rect(Rect2(238, 20, 140, 96), UIThemeBuilder.UI_BORDER_STEEL, false, 2.0)
+		draw_line(Vector2(166, 72), Vector2(238, 72), UIThemeBuilder.UI_BORDER_ACTIVE, 3.0)
 		for p: Vector2 in [Vector2(274, 44), Vector2(326, 44), Vector2(300, 92)]:
 			draw_circle(p, 12, UIThemeBuilder.SEMANTIC_ALLY)
+		draw_string(UIThemeBuilder.build_system_font(), Vector2(54, 128), "3 OUTPOSTS // +500 PTS // +1 ARMOR", HORIZONTAL_ALIGNMENT_LEFT, -1, UIThemeBuilder.TYPE_MICRO, UIThemeBuilder.SEMANTIC_ALLY)

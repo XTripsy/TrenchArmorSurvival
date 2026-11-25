@@ -1,6 +1,10 @@
 extends CanvasLayer
 
 const BEST_SCORE_SETTING: String = "application/config/best_score"
+const REPORT_CONTENT_TOP: float = 120.0
+const REPORT_CONTENT_WIDTH: float = 460.0
+const REPORT_CONTENT_HEIGHT: float = 300.0
+var _is_redeploying: bool = false
 
 @onready var overlay: Control = $Overlay
 @onready var header_label: Label = $Overlay/HeaderLabel
@@ -21,28 +25,36 @@ func _ready() -> void:
 	redeploy_button.pressed.connect(_on_redeploy_pressed)
 	menu_button.pressed.connect(_on_menu_pressed)
 	header_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_DISPLAY, UIThemeBuilder.UI_TEXT_DANGER, 2)
+	stats_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_LABEL, UIThemeBuilder.UI_TEXT_PRIMARY, 2)
 	_build_report_decoration()
 	if GameManager.state == GameManager.State.GAME_OVER:
 		_show_stats()
 
 func _build_report_decoration() -> void:
+	var report_card: PanelContainer = PanelContainer.new()
+	report_card.name = "ReportCard"
+	report_card.position = Vector2(410, REPORT_CONTENT_TOP)
+	report_card.custom_minimum_size = Vector2(REPORT_CONTENT_WIDTH, REPORT_CONTENT_HEIGHT)
+	report_card.add_theme_stylebox_override("panel", UIThemeBuilder.panel_style(UIThemeBuilder.UI_BG_DARK, UIThemeBuilder.UI_BORDER_STEEL, 4, 2))
+	overlay.add_child(report_card)
+
 	var frame: TacticalFrame = TacticalFrame.new()
 	frame.show_brackets = true
 	frame.show_scanlines = true
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	overlay.add_child(frame)
-	
+	report_card.add_child(frame)
+
 	var report_label: Label = Label.new()
 	report_label.text = "AFTER-ACTION COMBAT REPORT"
-	report_label.position = Vector2(0, 210)
-	report_label.size = Vector2(1280, 30)
+	report_label.position = Vector2(0, 56)
+	report_label.size = Vector2(REPORT_CONTENT_WIDTH, 30)
 	report_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	report_label.label_settings = UIThemeBuilder.create_label_settings(UIThemeBuilder.TYPE_HEADER, UIThemeBuilder.UI_TEXT_MUTED)
 	overlay.add_child(report_label)
-	
+
 	_rank_stamp = RankStamp.new()
-	_rank_stamp.position = Vector2(850, 150)
+	_rank_stamp.position = Vector2(850, REPORT_CONTENT_TOP + 18.0)
 	_rank_stamp.custom_minimum_size = Vector2(76, 76)
 	_rank_stamp.visible = false
 	overlay.add_child(_rank_stamp)
@@ -59,6 +71,8 @@ func _process(delta: float) -> void:
 			redeploy_button.disabled = false
 
 func _on_game_state_changed(new_state: int) -> void:
+	if _is_redeploying:
+		return
 	if new_state == int(GameManager.State.GAME_OVER):
 		_show_stats()
 	else:
@@ -120,8 +134,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _on_redeploy_pressed() -> void:
-	if _lockout_timer > 0.0:
+	if _lockout_timer > 0.0 or _is_redeploying:
 		return
+	_is_redeploying = true
+	overlay.visible = false
+	redeploy_button.disabled = true
+	GameManager.change_state(GameManager.State.PLAYING)
 	var arena: Node = get_parent()
 	if arena != null and arena.has_method("restart_run"):
 		arena.call("restart_run")

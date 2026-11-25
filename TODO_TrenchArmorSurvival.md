@@ -23,7 +23,7 @@
 
 ## PROGRESS LOG
 
-**Snapshot:** 2026-11-25 · Engine `4.7.2.stable.steam.ed1daf0bf` · **Next: Phase 13 — Showcase Visual Polish & Rich Command UI (T-055..T-060), then Phase 9 QA (T-039..T-041)**
+**Snapshot:** 2026-11-25 · Engine `4.7.2.stable.steam.ed1daf0bf` · **Next: Phase 9 QA (T-039..T-041)**
 
 | Phase | Tasks | Status | Bukti |
 |---|---|---|---|
@@ -40,7 +40,7 @@
 | 10 — Boss & Map Expansion | T-042..T-045 | ✅ Selesai + terverifikasi | Harness headless & windowed `PASS` 55/55 exit 0; `--headless --editor --quit` exit 0; `--headless --quit` exit 0 |
 | 11 — Territory Invasion & Playtest UI | T-046..T-049 | ✅ Selesai + terverifikasi | Harness headless & windowed `PASS` 55/55 exit 0; `--headless --editor --quit` exit 0; `--headless --quit` exit 0 |
 | 12 — Professional UI/UX Overhaul | T-050..T-054 | ✅ Selesai + terverifikasi | Editor parse exit 0; HUD harness 5/5; diegetic/menu harness 8/8 |
-| 13 — Showcase Visual Polish & Rich UI | T-055..T-059 | ✅ Selesai + terverifikasi | Editor parse exit 0; T-055 7/7; T-057 6/6; T-058 6/6; T-059 9/9; headless smoke exit 0 |
+| 13 — Showcase Visual Polish & Rich UI | T-055..T-059 | ✅ Selesai + terverifikasi | Editor parse exit 0; T-055 7/7; T-057 6/6; T-058 6/6; T-059 9/9; UI fixes harness 7/7; headless smoke exit 0 |
 
 ### Ringkasan Foundation & Expansion (Phase 0–12)
 - **Phase 0–8:** Core autoloads (`EventBus`, `GameManager`, `VFXManager`, `AudioManager`), dual-control `PlayerTank`, `PlayerBullet` 1× ricochet (`#FF5500`, 2× score), 3 standard enemy types, environment obstacles, `WaveDirector`, audio synth pool, and core UI flow.

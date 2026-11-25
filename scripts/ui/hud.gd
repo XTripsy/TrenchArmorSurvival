@@ -605,7 +605,7 @@ func _draw_minimap(canvas: CanvasItem, viewport_size: Vector2) -> void:
 	for node: Node in get_tree().get_nodes_in_group("bouncy_surface"):
 		var obs: Node2D = node as Node2D
 		if obs != null:
-			canvas.draw_rect(Rect2(_to_minimap(obs.global_position, inner) - Vector2(3, 3), Vector2(6, 6)), UIThemeBuilder.UI_SURFACE)
+			canvas.draw_circle(_to_minimap(obs.global_position, inner), 2.0, UIThemeBuilder.UI_ORNAMENT_DIM)
 
 	for node: Node in get_tree().get_nodes_in_group("capture_zone"):
 		var zone: Node2D = node as Node2D
